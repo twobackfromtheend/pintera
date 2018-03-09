@@ -17,6 +17,8 @@ class MplCanvas(FigureCanvas):
     def __init__(self, width=5, height=10):
         self.fig = Figure(figsize=(width, height))
         self.ax = self.fig.add_subplot(111)
+        self.ax.text(0.5, 0.5, 'Select signal to plot.', va='center', ha='center', transform=self.fig.transFigure)
+        self.ax.axis('off')
         super().__init__(self.fig)
         super().setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         super().updateGeometry()
@@ -92,8 +94,8 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.signals_list_widget.clear()
         self.signals_list_widget.addItems(self.data_file_names)
-        if self.data_file_names:
-            self.signals_list_widget.setCurrentRow(0)
+        # if self.data_file_names:
+        #     self.signals_list_widget.setCurrentRow(0)
 
     def connect_functions(self):
         self.signals_list_widget.itemSelectionChanged.connect(self.load_selected_signal)
@@ -120,7 +122,6 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
 
         signal = self.data_signals[_signal_index]
         self.recalculate()
-        # self.draw_signal(signal)
 
         x_lims = signal.get_x_lims()
         self.x_lim_spin_box_1.setValue(x_lims[0])
@@ -168,9 +169,14 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
             'Reset options for signal %s' % _signal_name)
 
     def draw_signal(self, signal):
+        if self.use_dist_as_x_checkbox.isChecked():
+            dps = self.dps_spin_box.value() * 1e-9
+        else:
+            dps = None
         scipy_fit, calc_fit = signal_plotter.plot_signal(signal, self.plot_widget.canvas.ax,
                                                          fig=self.plot_widget.canvas.fig,
-                                                         toolbar=self.toolbar)
+                                                         toolbar=self.toolbar,
+                                                         dps=dps)
         self.plot_widget.canvas.draw()
 
         # update spinboxes
@@ -179,7 +185,12 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
         self.fit_s_double_spin_box.setValue(scipy_fit[2] ** 0.5)
 
     def update_patches(self, signal):
-        signal_plotter.update_patches(signal, self.plot_widget.canvas.ax)
+        if self.use_dist_as_x_checkbox.isChecked():
+            dps = self.dps_spin_box.value() * 1e-9
+        else:
+            dps = None
+
+        signal_plotter.update_patches(signal, self.plot_widget.canvas.ax, dps=dps)
         self.plot_widget.canvas.draw()
 
     def recalculate(self):
@@ -243,15 +254,11 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
         signal = self.data_signals[_signal_index]
 
         if use_dist_as_x:
+            # enable stuff
+            self.dps_label.setDisabled(False)
+            self.dps_spin_box.setDisabled(False)
+        else:
+            self.dps_label.setDisabled(True)
+            self.dps_spin_box.setDisabled(True)
 
-
-
-
-
-# import sys
-#
-# # Create GUI application
-# app = QtWidgets.QApplication(sys.argv)
-# form = MyApp()
-# form.show()
-# app.exec_()
+        self.recalculate()
