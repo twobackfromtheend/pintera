@@ -4,6 +4,10 @@ The Python INTERferogram Analyser (name suggestions accepted).
 
 ## Features
 
+<p align="center">
+  <img width="586" height="453" src="https://github.com/twobackfromtheend/pintera/raw/master/gui_example.png">
+</p>
+
 ### Data Parsing
 - Parses data from the files saved from LabView, and allows for easy saving in a .csv format through drag-and-drop.
 - Drag and drop files saved from LabView onto data_io.py. The corresponding .csv files will be saved alongside their original data files (e.g. dragging and dropping 'W1S2' will create 'W1S2.csv' in the same folder). You can drag and drop multiple files to parse them all at once.
@@ -38,10 +42,10 @@ Valid data files in the data/ folder are parsed and listed. Select one to view i
 ##### Calibration
 - "Find Motor DPS" calculates the displacement from each motor step (DPS being displacement per step).
 - Two methods are used (and plotted and printed):
-	1. 
+	1. Binning
 		- The signal is split into *n* equal parts. The DPS is calculated from each of those parts. NumPy.mean and .std are used to estimate the mean and standard deviation from the DPSes calculated from the *n* bins. *n* is plotted from 1 (with no error) to some fraction of the total number of something I forgot. (Can find from code.) To obtain a final value and error, the average mean and average standard deviation for 5 ≤ *n* ≤ 10 is taken (and plotted in red. The horizontal red error bar is not an error, and is simply used to indicate the region over which the mean and standard deviation was averaged). 
 		- The result is printed in higher precision than shown on the graph as "Average DPS for 5-10 bins".
-	3.  
+	2.  Gaussian Fit to steps between maxima
 		- The number of motor steps between each maxima and the next is counted. (This number of steps is a multiple of the "steps per sample" (delta) from the data collection window.) This number of steps, and how many times that number of steps happened between maxima is plotted in the first plot in Figure 2. The mean and standard deviation is calculated using NumPy, and the Gaussian fit is used to show the calculated mean and standard deviation
 		- For each "number of motor steps between maxima", the corresponding DPS is calculated using the given *known wavelength*. This is plotted in the second plot in Figure 2. The mean and standard deviation is calculated using NumPy, and the Gaussian fit is used to show the calculated mean and standard deviation. Sidenote: SciPy.optimise is used to find the amplitude of the Gaussian fit, but that has no impact on results, as the Gaussian curve is only used to give a feel for the calculated mean and standard deviation.
 		- The result is printed in higher precision than shown on the graphs as "DPS: #, DPS std dev: #".
