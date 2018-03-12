@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy as sp
 import scipy.signal as sps
+from scipy import constants
 from scipy import optimize
 import config
 
@@ -64,6 +65,11 @@ class Signal:
         return x, norm_y
 
     def get_moving_y_offset(self, wavelengths=5):
+        """
+        Returns a NumPy array that can be used as a y-offset (e.g. y = y - y_offset).
+        Averages out the prior and next n wavelengths, where n is the passed parameter.
+        The distance of a wavelength is calculated as a simple mean distance between peaks).
+        """
         max_x, max_y = self.get_local_maxes()
         average_steps_between_max = np.mean(np.ediff1d(max_x))
 
@@ -71,20 +77,8 @@ class Signal:
 
         steps_buffer = int(wavelengths * average_steps_between_max)
 
-        # print(wavelengths * average_steps_between_max)
-        # _i_start = np.argmax(self.x > self.x[0] + int(wavelengths * average_steps_between_max))
-        # _i_end = np.argmax(self.x > self.x[-1] - int(wavelengths * average_steps_between_max))
-        # print(np.argmax(self.x > max_x[wavelengths]), np.argmax(self.x > max_x[-wavelengths - 1]))
-        # print(_i_start, _i_end)
-        # for i in range(_i_start, _i_end + 1):
-        #     _x, _y = self.x[i], self.y[i]
-        #
-        #     _x_i_start = np.argmax(self.x > _x -steps_buffer)
-        #     _x_i_end = np.argmax(self.x > _x + steps_buffer)
-        #
-        #     y_offsets[i] = np.mean(self.y[_x_i_start:_x_i_end + 1])
-
         for i in range(steps_buffer, len(self.x) - steps_buffer):
+            # TODO: Optimise (probably can be done with NumPy)
             _x, _y = self.x[i], self.y[i]
             _steps_buffer = min(i, len(self.x) - i, steps_buffer)
             _x_i_start = np.argmax(self.x > _x - _steps_buffer)
@@ -93,8 +87,6 @@ class Signal:
             y_offsets[i] = np.mean(self.y[_x_i_start:_x_i_end + 1])
 
         return y_offsets
-
-
 
     def get_x_lims(self):
         steps_lim_low = self.config.getint('steps_lim_low')
@@ -146,6 +138,7 @@ class Signal:
         else:
             # take all greater/equal to both sides
             maxes = sps.argrelextrema(y, np.greater_equal)[0]
+
         # check that max_y values > 0
         maxes = maxes[y[maxes] > 0]
 
@@ -175,7 +168,8 @@ class Signal:
                 pass
             else:
                 # fit_params is (amplitude, mean, sigma2)
-                gaussian_fit = lambda fit_params, x: fit_params[0] * np.exp(-(x - fit_params[1]) ** 2 / (2 * fit_params[2]))
+                gaussian_fit = lambda fit_params, x: fit_params[0] * np.exp(
+                    -(x - fit_params[1]) ** 2 / (2 * fit_params[2]))
                 err_func = lambda fit_params, x, y: gaussian_fit(fit_params, x) - y  # Distance to the target function
                 initial_parameters = [y_max, mean, sigma2]  # Initial guess for the parameters
                 fitted_params, success = optimize.leastsq(err_func, initial_parameters[:], args=(x, y))
@@ -219,19 +213,161 @@ class Signal:
 
     @staticmethod
     def as_string(*args):
-        # returns a string that can be pasted into
+        # returns a string that can be pasted into Excel/Origin/other stuff (tab as delimiter)
         _s = io.BytesIO()
         data = np.column_stack(args)
         np.savetxt(_s, data, fmt=('%i', '%.18e'), delimiter='\t')
         return _s.getvalue().decode()
 
+    def get_steps_between_peaks(self):
+        """
+        Returns steps_data and dps_data, where
+            steps_data = (steps, unique_steps_between_peaks, unique_steps_counts)
+
+        Calculates the number of steps between each peak and the next
+        (e.g. if 5 peaks found, there will be 4 "steps between peaks", and the sum of unique steps_count will be 4)
+        unique_steps_between_peaks is an array of multiples of self.delta.
+
+        Filters out steps between peaks that are < 0.3 or > 1.7 times the modal steps count.
+        1.7 chosen to avoid the small second peak at 2 times (probably due to single missed peaks), and
+        0.3 chosen to preserve symmetry about the peak.
+        """
+        max_x, max_y = self.get_local_maxes()
+        full_steps = np.ediff1d(max_x)
+        # _full_mean, _full_std = np.mean(full_steps), np.std(full_steps)
+        _full_count = len(full_steps)
+
+        unique_steps_between_peaks, unique_steps_counts = np.unique(full_steps, return_counts=True)
+
+        _filter = np.logical_and(full_steps < unique_steps_between_peaks[np.argmax(unique_steps_counts)] * 1.7,
+                                 full_steps > unique_steps_between_peaks[np.argmax(unique_steps_counts)] * 0.3)
+        # 1.7 chosen as filter, as there seems to be another peak ~2* (probably due to single missed peaks)
+        # 1.7 avoids the start of the gaussian at 2*
+
+        if not _filter.all():
+            steps = full_steps[_filter]
+            # print(unique_steps_between_peaks[np.argmax(unique_steps_counts)])
+            _filtered_count = len(steps)
+            _counts = (_full_count, _filtered_count, _full_count - _filtered_count)
+            # print('Original Count: %s, Filtered Count: %s, Excluded Count: %s' % _counts)
+            # print('Filtered:', full_steps[np.invert(_filter)])
+            unique_steps_between_peaks, unique_steps_counts = np.unique(steps, return_counts=True)
+        else:
+            steps = full_steps
+
+        return steps, unique_steps_between_peaks, unique_steps_counts
+
+    def get_motor_step_size_dps_per_peak(self, known_wavelength):
+        """
+        Takes in a known wavelength (in metres) to find motor step size (calibration).
+        Returns steps_data and dps_data, where
+            steps_data = (steps, unique_steps_between_peaks, unique_steps_counts)
+            dps_data = (_dpses, unique_dpses, unique_dpses_counts, dps_mean, dps_std)
+
+        Finds the number of steps between maxima, then finds the corresponding displacement per step (dps).
+        If there are 5 maxima points, there will be 4 data points (4 'steps between maxima' to 4 'dps').
+        Returns the mean and std for dps. Other returned information (such as steps_data) is returned for plotting use.
+        """
+        steps, unique_steps_between_peaks, unique_steps_counts = self.get_steps_between_peaks()
+
+        _dpses = known_wavelength / (2 * steps)
+        dps_mean, dps_std = np.mean(_dpses), np.std(_dpses)
+        unique_dpses, unique_dpses_counts = np.unique(_dpses, return_counts=True)
+        print('DPS: %s, DPS std dev: %s' % (dps_mean, dps_std))
+
+        steps_data = (steps, unique_steps_between_peaks, unique_steps_counts)
+        dps_data = (_dpses, unique_dpses, unique_dpses_counts, dps_mean, dps_std)
+        return steps_data, dps_data
+
+    def get_investigation_data(self, sigma, dps, sigma_err=0, dps_err=0):
+        """Pass the standard deviation of the gaussian fit in terms of motor_steps
+        and the displacement per motor step"""
+
+        coherence_length_in_motor_steps = 2 * np.sqrt(2 * np.log(2)) * sigma
+        coherence_length = coherence_length_in_motor_steps * dps  # in metres
+
+        steps, unique_steps_between_peaks, unique_steps_counts = self.get_steps_between_peaks()
+
+        distances = dps * steps
+        # distances_mean, distances_std = np.mean(distances), np.std(distances)
+
+        wavelengths = distances * 2
+        wavelengths_mean, wavelengths_std = np.mean(wavelengths), np.std(wavelengths)
+
+        mean_wavelength = wavelengths_mean
+
+        frequencies = constants.c / wavelengths
+        frequencies_mean, frequencies_std = np.mean(frequencies), np.std(frequencies)
+
+        spectral_width = coherence_length * constants.c / mean_wavelength ** 2
+        spectral_width = constants.c / (np.pi * coherence_length)
+        print('spec_width (Hz): %.5e' % spectral_width)
+        print('spec_width (m): %.5e' % (mean_wavelength ** 2 / constants.c * spectral_width))
+
+        if sigma_err == 0 and dps_err == 0:
+            print('Coherence length: %.5e' % coherence_length)
+            print('Spectral width: %.5e' % spectral_width)
+            print('Mean frequencies: %.5e pm %.5e' % (frequencies_mean, frequencies_std))
+            print('Mean wavelength: %.5e pm %.5e' % (mean_wavelength, wavelengths_std))
+        else:
+            print(dps_err, 'asdasdasfaegsegeg')
+            coherence_length_err = dps_err / dps * coherence_length
+            spectral_width_err = np.sqrt((coherence_length_err / (constants.c * mean_wavelength ** 2)) ** 2 +
+                                         (2 * coherence_length / (constants.c * mean_wavelength ** 3)) ** 2)
+            print(mean_wavelength ** 2 / coherence_length, 'dlambda')
+            print('Coherence length: %.5e pm %.5e' % (coherence_length, coherence_length_err))
+            print('Spectral width: %.5e pm %.5e' % (spectral_width, spectral_width_err ))
+            print('Mean frequencies: %.5e pm %.5e' % (frequencies_mean, frequencies_std))
+            print('Mean wavelength: %.5e pm %.5e' % (mean_wavelength, wavelengths_std))
+
+        data = {'coherence_length': coherence_length,
+                'spectral_width': spectral_width,
+                'mean_wavelength': mean_wavelength,
+                }
+        return data
+
+    def find_strongest_freq(self):
+        from numpy import fft
+
+        fig, (ax1, ax2) = plt.subplots(2)
+
+        _filter = 0
+        fourier = fft.fft(self.y)[_filter:]
+        freqs = fft.fftfreq(self.y.size, d=self.delta)[_filter:]
+
+        positive_frequencies = freqs[np.where(freqs >= 0)]
+        magnitudes = abs(fourier[np.where(freqs >= 0)])
+        peak_freq_i = np.argmax(magnitudes)
+        peak_frequency = freqs[peak_freq_i]
+        print('Peak Freq: %s, (%s)' % (peak_frequency, peak_freq_i))
+        ax1.plot(positive_frequencies, magnitudes, '.')
+
+        ax2.plot(self.x, self.y)
+
+
+
+        from scipy import optimize
+        gaussian_fit = lambda x_offset, x: np.sin(2 * np.pi * (x - x_offset) * peak_frequency)
+        err_func = lambda x_offset, x, y: gaussian_fit(x_offset, x) - y  # Distance to the target function
+        initial_parameters = [0]  # Initial guess for the parameters
+
+        found_x_offset, success = optimize.leastsq(err_func, initial_parameters[:],
+                                                args=(self.x, self.y))
+
+        _x = np.linspace(self.x[0], self.x[-1], 10000)
+        _y = np.sin(2 * np.pi * (_x - found_x_offset) * peak_frequency)
+
+        ax2.plot(_x, _y)
+
+        plt.show()
+
 if __name__ == '__main__':
     data_dir = 'data'  # change to blank string ('') if data is not in its own directory
-    file_names = ['20S3', 'iP10S1', '10S2', 'W1S2', 'OPW5S1']
+    file_names = ['20S3', 'iP10S1', '10S2', 'W1S2', 'W10S1', 'OPW5S1']
 
     signals = create_signals(file_names, data_dir)
 
-    signal = signals[0]
+    signal = signals[3]
 
     # plt.plot(signal.x, signal.y)
     # plt.show()
@@ -244,16 +380,8 @@ if __name__ == '__main__':
     # _y_offset = signal.get_moving_y_offset()
     # plt.plot(signal.x, signal.y - _y_offset, 'r', alpha=0.3)
 
+    # import signal_plotter
+    #
+    # signal_plotter.plot_motor_step_size_dps(signal)
 
-    import signal_plotter
-    signal_plotter.plot_motor_step_size_dps(signal)
-    # find_step_size(x, y)
-    #
-    # plt.plot(x, y)
-    #
-    # max_x, max_y = signal.get_local_maxes()
-    # print(max_x, max_y)
-    #
-    #
-    # plt.plot(max_x, max_y, 'r.')
-    # plt.show()
+    signal.find_strongest_freq()

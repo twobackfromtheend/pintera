@@ -120,6 +120,8 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
         _signal_index = self.signals_list_widget.currentRow()
         # print(_signal_name, self.signals_list_widget.currentRow())
 
+        print('Loading signal %s' % _signal_name)
+
         signal = self.data_signals[_signal_index]
         self.recalculate()
 
@@ -180,9 +182,23 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
         self.plot_widget.canvas.draw()
 
         # update spinboxes
+        # fit
+        sigma = scipy_fit[2] ** 0.5
         self.fit_a_double_spin_box.setValue(scipy_fit[0])
         self.fit_m_double_spin_box.setValue(scipy_fit[1])
-        self.fit_s_double_spin_box.setValue(scipy_fit[2] ** 0.5)
+        self.fit_s_double_spin_box.setValue(sigma)
+        # data
+        if self.use_dist_as_x_checkbox.isChecked():
+            sigma = sigma / dps  # return to in terms of motor steps if sigma is in terms of dps
+
+        dps, dps_err = self.dps_spin_box.value() * 1e-9, self.dps_pm_spin_box.value() * 1e-9
+        if dps_err != 0:
+            data = signal.get_investigation_data(sigma, dps, dps_err=dps_err)
+        else:
+            data = signal.get_investigation_data(sigma, dps)
+        self.data_coherence_length_spin_box.setValue(data['coherence_length'])
+        self.data_spectral_width_spin_box.setValue(data['spectral_width'])
+        self.data_mean_wavelength_spin_box.setValue(data['mean_wavelength'] * 1e9)
 
     def update_patches(self, signal):
         if self.use_dist_as_x_checkbox.isChecked():

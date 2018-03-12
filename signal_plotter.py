@@ -108,7 +108,7 @@ def update_patches(signal, ax, dps=None):
 def plot_best_fit_gaussian(signal, ax, plot_scipy=True, plot_calc=False, dps=None):
     x_min, x_max = ax.get_xlim()
     scipy_fit, calc_fit = signal.find_best_fit_gaussian(also_use_scipy=True)
-    print('Fits:  \tScipy: %s, Calculated: %s)' % (scipy_fit, calc_fit))
+    print('Fits:  \tScipy: \t\t\t%.5e, \t%.5e, \t%.5e,\n\t\tCalculated: \t%.5e, \t%.5e, \t%.5e' % (*scipy_fit, *calc_fit))
 
     if dps is not None:
         calc_fit = calc_fit[0], calc_fit[1] * dps, calc_fit[2] * dps**2
@@ -172,34 +172,9 @@ def plot_motor_step_dps_with_bins(signal, known_wavelength=None):
 
 
 def plot_motor_step_size_dps_per_peak(signal, known_wavelength=546.1e-9):
-    max_x, max_y = signal.get_local_maxes()
-    full_steps = np.ediff1d(max_x)
-    # _full_mean, _full_std = np.mean(full_steps), np.std(full_steps)
-    _full_count = len(full_steps)
-
-    unique_steps_between_peaks, unique_steps_counts = np.unique(full_steps, return_counts=True)
-
-    _filter = np.logical_and(full_steps < unique_steps_between_peaks[np.argmax(unique_steps_counts)] * 1.7,
-                             full_steps > unique_steps_between_peaks[np.argmax(unique_steps_counts)] * 0.3)
-    # 1.7 chosen as filter, as there seems to be another peak ~2* (probably due to single missed peaks)
-    # 1.7 avoids the start of the gaussian at 2*
-
-    if not _filter.all():
-        steps = full_steps[_filter]
-        # print(unique_steps_between_peaks[np.argmax(unique_steps_counts)])
-        _filtered_count = len(steps)
-        _counts = (_full_count, _filtered_count, _full_count - _filtered_count)
-        # print('Original Count: %s, Filtered Count: %s, Excluded Count: %s' % _counts)
-        # print('Filtered:', full_steps[np.invert(_filter)])
-        unique_steps_between_peaks, unique_steps_counts = np.unique(steps, return_counts=True)
-    else:
-        steps = full_steps
-
-    _dpses = known_wavelength / (2 * steps)
-    dps_mean, dps_std = np.mean(_dpses), np.std(_dpses)
-    unique_dpses, unique_dpses_counts = np.unique(_dpses, return_counts=True)
-    print('DPS: %s, DPS std dev: %s' % (dps_mean, dps_std))
-
+    steps_data, dps_data = signal.get_motor_step_size_dps_per_peak(known_wavelength)
+    steps, unique_steps_between_peaks, unique_steps_counts = steps_data
+    _dpses, unique_dpses, unique_dpses_counts, dps_mean, dps_std = dps_data
     fig = plt.figure(figsize=(10, 6))
 
     # Plot 1:
@@ -253,7 +228,7 @@ def plot_motor_step_size_dps_per_peak(signal, known_wavelength=546.1e-9):
     ax2.legend(loc=1)
 
     ax2.set_ylabel('Count of Displacement per Step')
-    ax2.set_xlabel('Displacement per step')
+    ax2.set_xlabel('Displacement per step (m)')
 
     plt.tight_layout()
     plt.show()
