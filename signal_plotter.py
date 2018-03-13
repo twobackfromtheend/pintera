@@ -3,6 +3,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 import numpy as np
+from scipy import optimize
 
 matplotlib.rcParams['mathtext.fontset'] = 'cm'
 matplotlib.rcParams['font.family'] = 'serif'
@@ -11,7 +12,7 @@ current_patches = []
 
 
 def plot_signal(signal, ax, fig=None, plot_style='x-', plot_max=True, show_full_y=False, toolbar=None, plot_fit=True,
-                dps=None):
+                dps=None, fit_type='lorentzian'):
     if ax is None:
         pass
         # ax = plt.gca()
@@ -63,7 +64,12 @@ def plot_signal(signal, ax, fig=None, plot_style='x-', plot_max=True, show_full_
         else:
             ax.plot(max_x * dps, max_y, 'r.', label='maxima')
     if plot_fit:
-        scipy_fit, calc_fit = plot_best_fit_gaussian(signal, ax, dps=dps)
+        if fit_type == 'lorentzian':
+            scipy_fit  = plot_best_fit_lorentzian(signal, ax, dps=dps)
+        elif fit_type == 'gaussian':
+            scipy_fit = plot_best_fit_gaussian(signal, ax, dps=dps)
+        else:
+            print('fit_type not specified in signal_plotter.plot_signal')
 
     ax.set_xlim((x_min, x_max))
     ax.set_ylim((y_min, y_max))
@@ -85,7 +91,7 @@ def plot_signal(signal, ax, fig=None, plot_style='x-', plot_max=True, show_full_
         fig.tight_layout()
 
     if plot_fit:
-        return scipy_fit, calc_fit
+        return scipy_fit
 
 
 def update_patches(signal, ax, dps=None):
@@ -105,30 +111,49 @@ def update_patches(signal, ax, dps=None):
         current_patches[3].set_width(signal_x_lims[1] * dps - x_max)
 
 
-def plot_best_fit_gaussian(signal, ax, plot_scipy=True, plot_calc=False, dps=None):
+def plot_best_fit_gaussian(signal, ax, dps=None):
     x_min, x_max = ax.get_xlim()
     scipy_fit, calc_fit = signal.find_best_fit_gaussian(also_use_scipy=True)
     print('Fits:  \tScipy: \t\t\t%.5e, \t%.5e, \t%.5e,\n\t\tCalculated: \t%.5e, \t%.5e, \t%.5e' % (*scipy_fit, *calc_fit))
 
     if dps is not None:
-        calc_fit = calc_fit[0], calc_fit[1] * dps, calc_fit[2] * dps**2
-        scipy_fit = scipy_fit[0], scipy_fit[1] * dps, scipy_fit[2] * dps ** 2
+        # calc_fit = calc_fit[0], calc_fit[1] * dps, calc_fit[2] * dps
+        scipy_fit = scipy_fit[0], scipy_fit[1] * dps, scipy_fit[2] * dps
 
-    # fit_params is (amplitude, mean, sigma2)
-    gaussian_fit = lambda fit_params, x: fit_params[0] * np.exp(-(x - fit_params[1]) ** 2 / (2 * fit_params[2]))
+    # fit_params is (amplitude, mean, sigma)
+    gaussian_fit = lambda fit_params, x: fit_params[0] * np.exp(-(x - fit_params[1]) ** 2 / (2 * fit_params[2] ** 2))
 
-    if plot_scipy:
-        # plot scipy
-        fit_x = np.linspace(x_min, x_max, 10000)
-        optimised_gaussian_fit = gaussian_fit(scipy_fit, fit_x)
-        ax.plot(fit_x, optimised_gaussian_fit, 'k', label='SciPy fit')
-    if plot_calc:
-        # plot calculated fit
-        fit_x = np.linspace(x_min, x_max, 10000)
-        calculated_gaussian_fit = gaussian_fit(calc_fit, fit_x)
-        ax.plot(fit_x, calculated_gaussian_fit, 'y', label='calc. fit')
+    # plot scipy
+    fit_x = np.linspace(x_min, x_max, 10000)
+    optimised_gaussian_fit = gaussian_fit(scipy_fit, fit_x)
+    ax.plot(fit_x, optimised_gaussian_fit, 'k', label='SciPy fit (Gaussian)')
 
-    return scipy_fit, calc_fit
+    # Never used.
+    # # plot calculated fit
+    # fit_x = np.linspace(x_min, x_max, 10000)
+    # calculated_gaussian_fit = gaussian_fit(calc_fit, fit_x)
+    # ax.plot(fit_x, calculated_gaussian_fit, 'y', label='calc. fit')
+
+    return scipy_fit
+
+def plot_best_fit_lorentzian(signal, ax, dps=None):
+    x_min, x_max = ax.get_xlim()
+    (amplitude, mean, gamma) = signal.find_best_fit_lorentzian()
+    scipy_fit = (amplitude, mean, gamma)
+    print('Fits:  \tScipy: \t\t%.5e, \t%.5e, \t%.5e,' % scipy_fit)
+
+    if dps is not None:
+        scipy_fit = scipy_fit[0], scipy_fit[1] * dps, scipy_fit[2] * dps
+
+    # fit_params is (amplitude, mean, gamma)
+    lorentzian_fit = lambda fit_params, x: fit_params[0] / (1 + ((x - fit_params[1]) / fit_params[2]) ** 2)
+
+
+    # plot scipy
+    fit_x = np.linspace(x_min, x_max, 10000)
+    optimised_gaussian_fit = lorentzian_fit(scipy_fit, fit_x)
+    ax.plot(fit_x, optimised_gaussian_fit, 'k', label='SciPy fit (Lorentzian)')
+    return scipy_fit
 
 
 def plot_motor_step_dps_with_bins(signal, known_wavelength=None):
@@ -180,7 +205,7 @@ def plot_motor_step_size_dps_per_peak(signal, known_wavelength=546.1e-9):
     # Plot 1:
     ax1 = fig.add_subplot(121)
     # plot motor steps between peaks
-    # fit_params is (area, mean, sigma2)
+    # fit_params is (area, mean, sigma)
     gaussian_fit = lambda fit_params, x: fit_params[0] / np.sqrt(2 * np.pi * fit_params[2] ** 2) * np.exp(
         -(x - fit_params[1]) ** 2 / (2 * fit_params[2] ** 2))
 
@@ -210,7 +235,6 @@ def plot_motor_step_size_dps_per_peak(signal, known_wavelength=546.1e-9):
     x_min, x_max = plt.gca().get_xlim()
 
     # the following does not find mu/sigma. it only optimises the area so the fit looks good.
-    from scipy import optimize
     gaussian_fit = lambda area, x: area / np.sqrt(2 * np.pi * dps_std ** 2) * np.exp(
         -(x - dps_mean) ** 2 / (2 * dps_std ** 2))
     err_func = lambda fit_params, x, y: gaussian_fit(fit_params, x) - y  # Distance to the target function
@@ -231,4 +255,49 @@ def plot_motor_step_size_dps_per_peak(signal, known_wavelength=546.1e-9):
     ax2.set_xlabel('Displacement per step (m)')
 
     plt.tight_layout()
+    plt.show()
+
+
+def plot_motor_step_size_fourier(signal, known_wavelength=546.1e-9):
+    _dpses, scipy_fit, frequencies, magnitudes = signal.get_motor_step_size_fourier(known_wavelength)
+
+    fig, (ax1, ax2) = plt.subplots(2)
+
+
+    peak_freq_i = np.argmax(magnitudes)
+    peak_frequency = frequencies[peak_freq_i]
+    print('Peak Freq: %s, (%s)' % (peak_frequency, peak_freq_i))
+    ax1.plot(_dpses, magnitudes, '.')
+
+    (steps, _, _), dps_data = signal.get_motor_step_size_dps_per_peak(known_wavelength)
+    print(np.mean(steps), np.std(steps))
+
+    gaussian_fit = lambda fit_params, x: fit_params[0] * np.exp(
+        -(x - fit_params[1]) ** 2 / (2 * fit_params[2]))
+    x_lims = ax1.get_xlim()
+    x = np.linspace(x_lims[0], x_lims[1], 5000)
+    y = gaussian_fit(scipy_fit, x)
+    ax1.plot(x, y, 'r-')
+    ax1.set_title('Plot of magnitude of frequency against frequency')
+    ax1.set_ylabel('Magnitude')
+    ax1.set_xlabel('Frequency [per motor step]')
+
+    ax2.plot(signal.x, signal.y)
+
+    sine_fit = lambda x_offset, x: np.sin(2 * np.pi * (x - x_offset) * peak_frequency)
+    err_func = lambda x_offset, x, y: sine_fit(x_offset, x) - y  # Distance to the target function
+    initial_parameters = [0]  # Initial guess for the parameters
+    found_x_offset, success = optimize.leastsq(err_func, initial_parameters[:],
+                                               args=(signal.x, signal.y))
+
+    _x = np.linspace(signal.x[0], signal.x[-1], 10000)
+    _y = np.sin(2 * np.pi * (_x - found_x_offset) * peak_frequency)
+
+    ax2.plot(_x, _y)
+    ax2.set_title('Plot of signal overlaid with sine of peak frequency')
+    ax2.set_xlabel('Motor Step')
+    ax2.set_ylabel('Adjusted Amplitude')
+    plt.tight_layout()
+
+
     plt.show()
