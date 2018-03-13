@@ -268,8 +268,10 @@ def plot_motor_step_dps_with_fourier(signal, known_wavelength=546.1e-9):
     _dpses, scipy_fit, frequencies, magnitudes = signal.get_motor_step_dps_with_fourier(known_wavelength)
 
     # fig, (ax1, ax2, ax3) = plt.subplots(3)
+    fig = plt.figure(figsize=(10, 6))
+    # ax1 = plt.subplot(221)
+    ax1 = fig.add_subplot(221)
 
-    ax1 = plt.subplot(221)
     peak_freq_i = np.argmax(magnitudes)
     peak_frequency = frequencies[peak_freq_i]
     print('Peak Freq: %s (i: %s)' % (peak_frequency, peak_freq_i))
@@ -278,8 +280,8 @@ def plot_motor_step_dps_with_fourier(signal, known_wavelength=546.1e-9):
     ax1.set_ylabel('Magnitude')
     ax1.set_xlabel('Frequency [per motor step]')
 
-    ax2 = plt.subplot(222)
-
+    # ax2 = plt.subplot(222)
+    ax2 = fig.add_subplot(222)
     ax2.plot(_dpses, magnitudes, '.')
 
     gaussian_fit = lambda fit_params, x: fit_params[0] * np.exp(
@@ -293,8 +295,9 @@ def plot_motor_step_dps_with_fourier(signal, known_wavelength=546.1e-9):
     ax2.set_ylabel('Magnitude')
     ax2.set_xlabel('Displacement per Step (m)')
 
-    ax3 = plt.subplot(212)
-    ax3.plot(signal.x, signal.y)
+    # ax3 = plt.subplot(212)
+    ax3 = fig.add_subplot(212)
+    ax3.plot(signal.x, signal.y, alpha=0.8)
 
     sine_fit = lambda x_offset, x: np.sin(2 * np.pi * (x - x_offset) * peak_frequency)
     err_func = lambda x_offset, x, y: sine_fit(x_offset, x) - y  # Distance to the target function
@@ -305,7 +308,7 @@ def plot_motor_step_dps_with_fourier(signal, known_wavelength=546.1e-9):
     _x = np.linspace(signal.x[0], signal.x[-1], 10000)
     _y = np.sin(2 * np.pi * (_x - found_x_offset) * peak_frequency)
 
-    ax3.plot(_x, _y)
+    ax3.plot(_x, _y, alpha=0.8)
     ax3.set_title('Plot of signal overlaid with sine of peak frequency')
     ax3.set_xlabel('Motor Step')
     ax3.set_ylabel('Adjusted Amplitude')

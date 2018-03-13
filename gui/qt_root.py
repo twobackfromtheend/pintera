@@ -189,6 +189,7 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
                                                dps=dps,
                                                fit_type=fit_type)
         self.plot_widget.canvas.draw()
+
         # update spinboxes
         # fit
         sigma = scipy_fit[2]
@@ -204,9 +205,11 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
             data = signal.get_investigation_data(sigma, dps, dps_err=dps_err)
         else:
             data = signal.get_investigation_data(sigma, dps)
-        self.data_coherence_length_spin_box.setValue(data['coherence_length'])
-        self.data_spectral_width_spin_box.setValue(data['spectral_width'])
+        self.data_coherence_length_spin_box.setValue(data['coherence_length'] * 1e6)
+        self.data_spectral_width_thz_spin_box.setValue(data['spectral_width_hz'] * 1e-12)
+        self.data_spectral_width_nm_spin_box.setValue(data['spectral_width_m'] * 1e9)
         self.data_mean_wavelength_spin_box.setValue(data['mean_wavelength'] * 1e9)
+        self.data_mean_frequency_spin_box.setValue(data['mean_frequency'] * 1e-12)
 
     def update_patches(self, signal):
         if self.use_dist_as_x_checkbox.isChecked():

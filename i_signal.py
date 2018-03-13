@@ -339,11 +339,15 @@ class Signal:
 
         return _dpses, scipy_fit, frequencies, magnitudes
 
-    def get_investigation_data(self, sigma, dps, sigma_err=0, dps_err=0):
+    def get_investigation_data(self, gamma, dps, gamma_err=0, dps_err=0, fit_type='lorentzian'):
         """Pass the standard deviation of the gaussian fit in terms of motor_steps
         and the displacement per motor step"""
+        if fit_type == 'lorentzian':
+            coherence_length_in_motor_steps = gamma
+        elif fit_type == 'gaussian':
+            # gamma is actually sigma
+            coherence_length_in_motor_steps = 2 * np.sqrt(2 * np.log(2)) * gamma
 
-        coherence_length_in_motor_steps = 2 * np.sqrt(2 * np.log(2)) * sigma
         coherence_length = coherence_length_in_motor_steps * dps  # in metres
 
         steps, unique_steps_between_peaks, unique_steps_counts = self.get_steps_between_peaks()
@@ -359,14 +363,14 @@ class Signal:
         frequencies = constants.c / wavelengths
         frequencies_mean, frequencies_std = np.mean(frequencies), np.std(frequencies)
 
-        spectral_width = coherence_length * constants.c / mean_wavelength ** 2
-        spectral_width = constants.c / (np.pi * coherence_length)
-        print('spec_width (Hz): %.5e' % spectral_width)
-        print('spec_width (m): %.5e' % (mean_wavelength ** 2 / constants.c * spectral_width))
+        spectral_width_hz = constants.c / (np.pi * coherence_length)
+        spectral_width_m = mean_wavelength ** 2 / constants.c * spectral_width_hz
+        print('spec_width (Hz): %.5e' % spectral_width_hz)
+        print('spec_width (m): %.5e' % spectral_width_m)
 
-        if sigma_err == 0 and dps_err == 0:
+        if gamma_err == 0 and dps_err == 0:
             print('Coherence length: %.5e' % coherence_length)
-            print('Spectral width: %.5e' % spectral_width)
+            print('Spectral width: %.5e' % spectral_width_hz)
             print('Mean frequencies: %.5e pm %.5e' % (frequencies_mean, frequencies_std))
             print('Mean wavelength: %.5e pm %.5e' % (mean_wavelength, wavelengths_std))
         else:
@@ -376,13 +380,15 @@ class Signal:
                                          (2 * coherence_length / (constants.c * mean_wavelength ** 3)) ** 2)
             print(mean_wavelength ** 2 / coherence_length, 'dlambda')
             print('Coherence length: %.5e pm %.5e' % (coherence_length, coherence_length_err))
-            print('Spectral width: %.5e pm %.5e' % (spectral_width, spectral_width_err))
+            print('Spectral width: %.5e pm %.5e' % (spectral_width_hz, spectral_width_err))
             print('Mean frequencies: %.5e pm %.5e' % (frequencies_mean, frequencies_std))
             print('Mean wavelength: %.5e pm %.5e' % (mean_wavelength, wavelengths_std))
 
         data = {'coherence_length': coherence_length,
-                'spectral_width': spectral_width,
+                'spectral_width_hz': spectral_width_hz,
+                'spectral_width_m': spectral_width_m,
                 'mean_wavelength': mean_wavelength,
+                'mean_frequency': frequencies_mean,
                 }
         return data
 
