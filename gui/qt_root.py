@@ -50,6 +50,7 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
         # replace plot_widget with MplWidget
         self.plot_widget.hide()
         self.plot_widget = MplWidget(self.plot_frame)
+        self.plot_widget.setMinimumSize(QtCore.QSize(0, 300))
         # self.addToolBar(NavigationToolbar(self.plot_widget.canvas, self), QtCore.Qt.ToolBarArea(1))
         self.toolbar = NavigationToolbar(self.plot_widget.canvas, self)
         self.addToolBar(QtCore.Qt.ToolBarArea(8), self.toolbar)
