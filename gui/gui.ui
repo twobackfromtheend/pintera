@@ -7,14 +7,14 @@
     <x>0</x>
     <y>0</y>
     <width>946</width>
-    <height>794</height>
+    <height>889</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Analyser</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout_2">
+   <layout class="QVBoxLayout" name="verticalLayout_2" stretch="1,1,2">
     <item>
      <widget class="QFrame" name="frame">
       <property name="frameShape">
@@ -70,7 +70,7 @@
          <property name="title">
           <string>Signal Options</string>
          </property>
-         <layout class="QVBoxLayout" name="verticalLayout" stretch="1,0,3,0,3,3,0,0,0">
+         <layout class="QVBoxLayout" name="verticalLayout" stretch="1,0,3,0,3,3,0,0,0,0,0">
           <item>
            <widget class="QFrame" name="frame_6">
             <property name="sizePolicy">
@@ -340,6 +340,45 @@
            </widget>
           </item>
           <item>
+           <widget class="QFrame" name="frame_5">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_5">
+             <item>
+              <widget class="QRadioButton" name="gaussian_radio_button">
+               <property name="text">
+                <string>Gaussian</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QRadioButton" name="lorentzian_radio_button">
+               <property name="toolTipDuration">
+                <number>3</number>
+               </property>
+               <property name="text">
+                <string>Lorentzian</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="Line" name="line_5">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="find_dps_push_button">
             <property name="text">
              <string>Find Motor DPS (Calibration)</string>
@@ -494,7 +533,7 @@
           <item row="2" column="0">
            <widget class="QLabel" name="label_10">
             <property name="text">
-             <string>Sigma</string>
+             <string>Sigma/gamma</string>
             </property>
            </widget>
           </item>

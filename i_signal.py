@@ -151,7 +151,16 @@ class Signal:
         return max_x, max_y
 
     def find_best_fit_gaussian(self, also_use_scipy=True, save=True, fix_mean=False, x_y=None):
-        """Returns amplitude, mean, and sigma^2. Uses get_local_maxes to get x and y unless x_y is passed"""
+        """
+        Returns scipy_fit, calculated_fit
+            each fit = (amplitude, mean, and sigma).
+
+        SciPy fit generated using scipy.optimise, optimising all of amplitude, mean, and sigma.
+        Calculated fit calculates the mean and sigma using formulae, and takes the max(y) as amplitude.
+
+        Uses get_local_maxes to get x and y unless x_y is passed.
+        TODO: Create fix_mean
+        """
         if x_y is None:
             x, y = self.get_local_maxes()
         else:
@@ -160,7 +169,7 @@ class Signal:
         amplitude = np.max(y)
 
         mean = np.sum(x * y) / np.sum(y)
-        sigma2 = np.abs(np.sum(y * (x - mean) ** 2) / np.sum(y))
+        sigma = np.sqrt(np.abs(np.sum(y * (x - mean) ** 2) / np.sum(y)))
 
         if also_use_scipy:
             if fix_mean is not False:
@@ -169,22 +178,58 @@ class Signal:
             else:
                 # fit_params is (amplitude, mean, sigma2)
                 gaussian_fit = lambda fit_params, x: fit_params[0] * np.exp(
-                    -(x - fit_params[1]) ** 2 / (2 * fit_params[2]))
+                    -(x - fit_params[1]) ** 2 / (2 * fit_params[2] ** 2))
                 err_func = lambda fit_params, x, y: gaussian_fit(fit_params, x) - y  # Distance to the target function
-                initial_parameters = [y_max, mean, sigma2]  # Initial guess for the parameters
+                initial_parameters = [y_max, mean, sigma]  # Initial guess for the parameters
                 fitted_params, success = optimize.leastsq(err_func, initial_parameters[:], args=(x, y))
                 # print(fitted_params, success)
 
                 if save:
                     self.config['gaussian_fit_amplitude'] = str(fitted_params[0])
                     self.config['gaussian_fit_mean'] = str(fitted_params[1])
-                    self.config['gaussian_fit_sigma^2'] = str(fitted_params[2])
+                    self.config['gaussian_fit_sigma'] = str(fitted_params[2])
 
-                return fitted_params, (amplitude, mean, sigma2)
+                return fitted_params, (amplitude, mean, sigma)
 
         else:
             # calculate gaussian fit from points
-            return amplitude, mean, sigma2
+            return amplitude, mean, sigma
+
+    def find_best_fit_lorentzian(self, save=True, fix_mean=False, x_y=None):
+        """
+        Returns scipy_fit: (amplitude, mean, and gamma).
+
+        SciPy fit generated using scipy.optimise, optimising all of amplitude, mean, and gamma.
+        Calculated fit calculates the mean and sigma^2 using formulae, and takes the max(y) as amplitude.
+
+        Uses get_local_maxes to get x and y unless x_y is passed.
+        TODO: Create fix_mean
+        """
+        if x_y is None:
+            x, y = self.get_local_maxes()
+        else:
+            x, y = x_y
+        y_max = np.max(y)
+
+        mean = np.sum(x * y) / np.sum(y)
+        sigma = np.sqrt(np.abs(np.sum(y * (x - mean) ** 2) / np.sum(y)))
+
+        if fix_mean is not False:
+            # TODO: Allow fixed mean optimisation
+            pass
+        else:
+            # fit_params is (amplitude, mean, gamma)
+            lorentzian_fit = lambda fit_params, x: fit_params[0] / (1 + ((x - fit_params[1]) / fit_params[2]) ** 2)
+            err_func = lambda fit_params, x, y: lorentzian_fit(fit_params, x) - y  # Distance to the target function
+            initial_parameters = [y_max, mean, sigma]  # Initial guess for the parameters
+            fitted_params, success = optimize.leastsq(err_func, initial_parameters[:], args=(x, y))
+            print(initial_parameters, fitted_params, 'asasdasdsadd')
+            if save:
+                self.config['lorentzian_fit_amplitude'] = str(fitted_params[0])
+                self.config['lorentzian_fit_mean'] = str(fitted_params[1])
+                self.config['lorentzian_fit_gamma'] = str(fitted_params[2])
+
+            return fitted_params
 
     def find_step_size(self, known_wavelength=546.1E-9, bins=1):
         # dt = lambda / 2
@@ -316,7 +361,7 @@ class Signal:
                                          (2 * coherence_length / (constants.c * mean_wavelength ** 3)) ** 2)
             print(mean_wavelength ** 2 / coherence_length, 'dlambda')
             print('Coherence length: %.5e pm %.5e' % (coherence_length, coherence_length_err))
-            print('Spectral width: %.5e pm %.5e' % (spectral_width, spectral_width_err ))
+            print('Spectral width: %.5e pm %.5e' % (spectral_width, spectral_width_err))
             print('Mean frequencies: %.5e pm %.5e' % (frequencies_mean, frequencies_std))
             print('Mean wavelength: %.5e pm %.5e' % (mean_wavelength, wavelengths_std))
 
@@ -326,40 +371,24 @@ class Signal:
                 }
         return data
 
-    def find_strongest_freq(self):
-        from numpy import fft
+    def get_motor_step_size_fourier(self, known_wavelength, freq_limits=(2e-3, 1.5e-2)):
 
-        fig, (ax1, ax2) = plt.subplots(2)
+        fourier = np.fft.fft(self.y)
+        freqs_full = np.fft.fftfreq(self.y.size, d=self.delta)
 
-        _filter = 0
-        fourier = fft.fft(self.y)[_filter:]
-        freqs = fft.fftfreq(self.y.size, d=self.delta)[_filter:]
+        freq_filter = np.where(np.logical_and(freqs_full >= freq_limits[0], freqs_full <= freq_limits[1]))
+        frequencies = freqs_full[freq_filter]
+        magnitudes = abs(fourier[freq_filter])
 
-        positive_frequencies = freqs[np.where(freqs >= 0)]
-        magnitudes = abs(fourier[np.where(freqs >= 0)])
-        peak_freq_i = np.argmax(magnitudes)
-        peak_frequency = freqs[peak_freq_i]
-        print('Peak Freq: %s, (%s)' % (peak_frequency, peak_freq_i))
-        ax1.plot(positive_frequencies, magnitudes, '.')
+        # steps between peaks = 1 wavelength = 1 / freq
+        # dps = known_wavelength / (2 * 1 wavelength) = freq * known_wavelength / 2
+        _dpses = frequencies * known_wavelength / 2
 
-        ax2.plot(self.x, self.y)
+        scipy_fit, calc_fit = signal.find_best_fit_gaussian(x_y=(_dpses, magnitudes))
+        print('DPS: Mean: %.4e, std: %.4e' % (scipy_fit[1], scipy_fit[2] ** 0.5))
 
+        return _dpses, scipy_fit, frequencies, magnitudes
 
-
-        from scipy import optimize
-        gaussian_fit = lambda x_offset, x: np.sin(2 * np.pi * (x - x_offset) * peak_frequency)
-        err_func = lambda x_offset, x, y: gaussian_fit(x_offset, x) - y  # Distance to the target function
-        initial_parameters = [0]  # Initial guess for the parameters
-
-        found_x_offset, success = optimize.leastsq(err_func, initial_parameters[:],
-                                                args=(self.x, self.y))
-
-        _x = np.linspace(self.x[0], self.x[-1], 10000)
-        _y = np.sin(2 * np.pi * (_x - found_x_offset) * peak_frequency)
-
-        ax2.plot(_x, _y)
-
-        plt.show()
 
 if __name__ == '__main__':
     data_dir = 'data'  # change to blank string ('') if data is not in its own directory
@@ -367,7 +396,7 @@ if __name__ == '__main__':
 
     signals = create_signals(file_names, data_dir)
 
-    signal = signals[3]
+    signal = signals[0]
 
     # plt.plot(signal.x, signal.y)
     # plt.show()
@@ -380,8 +409,9 @@ if __name__ == '__main__':
     # _y_offset = signal.get_moving_y_offset()
     # plt.plot(signal.x, signal.y - _y_offset, 'r', alpha=0.3)
 
-    # import signal_plotter
-    #
-    # signal_plotter.plot_motor_step_size_dps(signal)
+    import signal_plotter
 
-    signal.find_strongest_freq()
+    signal_plotter.plot_motor_step_size_fourier(signal)
+
+    # signal.get_motor_step_size_fourier(known_wavelength=546.1e-9)
+    # signal.find_best_fit_gaussian(x_y=)

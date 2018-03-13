@@ -175,15 +175,22 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
             dps = self.dps_spin_box.value() * 1e-9
         else:
             dps = None
-        scipy_fit, calc_fit = signal_plotter.plot_signal(signal, self.plot_widget.canvas.ax,
-                                                         fig=self.plot_widget.canvas.fig,
-                                                         toolbar=self.toolbar,
-                                                         dps=dps)
-        self.plot_widget.canvas.draw()
+        if self.lorentzian_radio_button.isChecked():
+            fit_type = 'lorentzian'
+        elif self.gaussian_radio_button.isChecked():
+            fit_type = 'gaussian'
+        else:
+            print('Neither lorentzian nor gaussian checked (in qt_root draw_signal)')
 
+        scipy_fit = signal_plotter.plot_signal(signal, self.plot_widget.canvas.ax,
+                                               fig=self.plot_widget.canvas.fig,
+                                               toolbar=self.toolbar,
+                                               dps=dps,
+                                               fit_type=fit_type)
+        self.plot_widget.canvas.draw()
         # update spinboxes
         # fit
-        sigma = scipy_fit[2] ** 0.5
+        sigma = scipy_fit[2]
         self.fit_a_double_spin_box.setValue(scipy_fit[0])
         self.fit_m_double_spin_box.setValue(scipy_fit[1])
         self.fit_s_double_spin_box.setValue(sigma)
@@ -257,8 +264,11 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
 
         signal = self.data_signals[_signal_index]
 
-        signal_plotter.plot_motor_step_dps_with_bins(signal)
-        signal_plotter.plot_motor_step_size_dps_per_peak(signal)
+        # TODO: Use indicated known_wavelength
+        known_wavelength = self.wavelength_double_spin_box.value()
+        signal_plotter.plot_motor_step_dps_with_bins(signal, known_wavelength=known_wavelength)
+        signal_plotter.plot_motor_step_size_dps_per_peak(signal, known_wavelength=known_wavelength)
+        signal_plotter.plot_motor_step_size_fourier(signal, known_wavelength=known_wavelength)
 
     def toggle_x_dist(self):
         use_dist_as_x = self.use_dist_as_x_checkbox.isChecked()
