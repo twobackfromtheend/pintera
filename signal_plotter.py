@@ -158,6 +158,7 @@ def plot_best_fit_lorentzian(signal, ax, dps=None):
 
 
 def plot_motor_step_dps_with_bins(signal, known_wavelength=None):
+    print('Plotting motor step dps with bins')
     max_x, max_y = signal.get_local_maxes()
     maxima_count = len(max_x)
 
@@ -197,8 +198,10 @@ def plot_motor_step_dps_with_bins(signal, known_wavelength=None):
     return dps_5_10_mean, dps_5_10_err
 
 
-def plot_motor_step_size_dps_per_peak(signal, known_wavelength=546.1e-9):
-    steps_data, dps_data = signal.get_motor_step_size_dps_per_peak(known_wavelength)
+def plot_motor_step_dps_per_peak(signal, known_wavelength=546.1e-9):
+    print('Plotting motor step dps per peak')
+
+    steps_data, dps_data = signal.get_motor_step_dps_per_peak(known_wavelength)
     steps, unique_steps_between_peaks, unique_steps_counts = steps_data
     _dpses, unique_dpses, unique_dpses_counts, dps_mean, dps_std = dps_data
     fig = plt.figure(figsize=(10, 6))
@@ -259,30 +262,39 @@ def plot_motor_step_size_dps_per_peak(signal, known_wavelength=546.1e-9):
     plt.show()
 
 
-def plot_motor_step_size_fourier(signal, known_wavelength=546.1e-9):
-    _dpses, scipy_fit, frequencies, magnitudes = signal.get_motor_step_size_fourier(known_wavelength)
+def plot_motor_step_dps_with_fourier(signal, known_wavelength=546.1e-9):
+    print('Plotting motor step dps with fourier')
 
-    fig, (ax1, ax2) = plt.subplots(2)
+    _dpses, scipy_fit, frequencies, magnitudes = signal.get_motor_step_dps_with_fourier(known_wavelength)
 
+    # fig, (ax1, ax2, ax3) = plt.subplots(3)
+
+    ax1 = plt.subplot(221)
     peak_freq_i = np.argmax(magnitudes)
     peak_frequency = frequencies[peak_freq_i]
-    print('Peak Freq: %s, (%s)' % (peak_frequency, peak_freq_i))
-    ax1.plot(_dpses, magnitudes, '.')
-
-    (steps, _, _), dps_data = signal.get_motor_step_size_dps_per_peak(known_wavelength)
-    print(np.mean(steps), np.std(steps))
-
-    gaussian_fit = lambda fit_params, x: fit_params[0] * np.exp(
-        -(x - fit_params[1]) ** 2 / (2 * fit_params[2] ** 2))
-    x_lims = ax1.get_xlim()
-    x = np.linspace(x_lims[0], x_lims[1], 5000)
-    y = gaussian_fit(scipy_fit, x)
-    ax1.plot(x, y, 'r-')
-    ax1.set_title('Plot of magnitude of frequency against frequency')
+    print('Peak Freq: %s (i: %s)' % (peak_frequency, peak_freq_i))
+    ax1.plot(frequencies, magnitudes, '.')
+    ax1.set_title('Plot of magnitude of frequency in signal against frequency')
     ax1.set_ylabel('Magnitude')
     ax1.set_xlabel('Frequency [per motor step]')
 
-    ax2.plot(signal.x, signal.y)
+    ax2 = plt.subplot(222)
+
+    ax2.plot(_dpses, magnitudes, '.')
+
+    gaussian_fit = lambda fit_params, x: fit_params[0] * np.exp(
+        -(x - fit_params[1]) ** 2 / (2 * fit_params[2] ** 2))
+    x_lims = ax2.get_xlim()
+    x = np.linspace(x_lims[0], x_lims[1], 5000)
+    y = gaussian_fit(scipy_fit, x)
+    ax2.plot(x, y, 'r-', label=r'$\mu=$%.2e%s$\sigma=$%.1e' % (scipy_fit[1], '\n', scipy_fit[2]))
+    ax2.legend()
+    ax2.set_title('Plot of occurrence of DPS in signal against DPS')
+    ax2.set_ylabel('Magnitude')
+    ax2.set_xlabel('Displacement per Step (m)')
+
+    ax3 = plt.subplot(212)
+    ax3.plot(signal.x, signal.y)
 
     sine_fit = lambda x_offset, x: np.sin(2 * np.pi * (x - x_offset) * peak_frequency)
     err_func = lambda x_offset, x, y: sine_fit(x_offset, x) - y  # Distance to the target function
@@ -293,10 +305,10 @@ def plot_motor_step_size_fourier(signal, known_wavelength=546.1e-9):
     _x = np.linspace(signal.x[0], signal.x[-1], 10000)
     _y = np.sin(2 * np.pi * (_x - found_x_offset) * peak_frequency)
 
-    ax2.plot(_x, _y)
-    ax2.set_title('Plot of signal overlaid with sine of peak frequency')
-    ax2.set_xlabel('Motor Step')
-    ax2.set_ylabel('Adjusted Amplitude')
+    ax3.plot(_x, _y)
+    ax3.set_title('Plot of signal overlaid with sine of peak frequency')
+    ax3.set_xlabel('Motor Step')
+    ax3.set_ylabel('Adjusted Amplitude')
     plt.tight_layout()
 
     plt.show()

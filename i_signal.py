@@ -222,7 +222,6 @@ class Signal:
             err_func = lambda fit_params, x, y: lorentzian_fit(fit_params, x) - y  # Distance to the target function
             initial_parameters = [y_max, mean, sigma]  # Initial guess for the parameters
             fitted_params, success = optimize.leastsq(err_func, initial_parameters[:], args=(x, y))
-            print(initial_parameters, fitted_params, 'asasdasdsadd')
             if save:
                 self.config['lorentzian_fit_amplitude'] = str(fitted_params[0])
                 self.config['lorentzian_fit_mean'] = str(fitted_params[1])
@@ -301,7 +300,7 @@ class Signal:
 
         return steps, unique_steps_between_peaks, unique_steps_counts
 
-    def get_motor_step_size_dps_per_peak(self, known_wavelength):
+    def get_motor_step_dps_per_peak(self, known_wavelength):
         """
         Takes in a known wavelength (in metres) to find motor step size (calibration).
         Returns steps_data and dps_data, where
@@ -323,8 +322,7 @@ class Signal:
         dps_data = (_dpses, unique_dpses, unique_dpses_counts, dps_mean, dps_std)
         return steps_data, dps_data
 
-    def get_motor_step_size_fourier(self, known_wavelength, freq_limits=(2e-3, 1.5e-2)):
-
+    def get_motor_step_dps_with_fourier(self, known_wavelength, freq_limits=(2e-3, 1.5e-2)):
         fourier = np.fft.fft(self.y)
         freqs_full = np.fft.fftfreq(self.y.size, d=self.delta)
 
@@ -410,7 +408,7 @@ if __name__ == '__main__':
 
     import signal_plotter
 
-    signal_plotter.plot_motor_step_size_fourier(signal)
+    signal_plotter.plot_motor_step_dps_with_fourier(signal)
 
-    # signal.get_motor_step_size_fourier(known_wavelength=546.1e-9)
+    # signal.get_motor_step_dps_with_fourier(known_wavelength=546.1e-9)
     # signal.find_best_fit_gaussian(x_y=)

@@ -88,8 +88,7 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
                     self.data_file_names.append(file_name)
                     self.data_signals.append(signal)
                 except Exception as e:
-                    print("Could not convert %s to signal." % file_name)
-                    print(e)
+                    print("Could not convert %s to signal. Error: %s" % (file_name, e))
         print("Created %s signals." % len(self.data_signals))
 
         self.signals_list_widget.clear()
@@ -269,11 +268,8 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
         # TODO: Use indicated known_wavelength
         known_wavelength = self.wavelength_double_spin_box.value() * 1e-9
         signal_plotter.plot_motor_step_dps_with_bins(signal, known_wavelength=known_wavelength)
-        print('1')
-        signal_plotter.plot_motor_step_size_dps_per_peak(signal, known_wavelength=known_wavelength)
-        print('2')
-        signal_plotter.plot_motor_step_size_fourier(signal, known_wavelength=known_wavelength)
-        print('3')
+        signal_plotter.plot_motor_step_dps_per_peak(signal, known_wavelength=known_wavelength)
+        signal_plotter.plot_motor_step_dps_with_fourier(signal, known_wavelength=known_wavelength)
 
     def toggle_x_dist(self):
         use_dist_as_x = self.use_dist_as_x_checkbox.isChecked()
