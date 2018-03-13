@@ -117,24 +117,28 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
         self.use_dist_as_x_checkbox.toggled.connect(self.toggle_x_dist)
 
     def load_selected_signal(self):
-        _signal_name = self.signals_list_widget.currentItem().text()
-        _signal_index = self.signals_list_widget.currentRow()
-        # print(_signal_name, self.signals_list_widget.currentRow())
+        try:
+            _signal_name = self.signals_list_widget.currentItem().text()
+            _signal_index = self.signals_list_widget.currentRow()
+            # print(_signal_name, self.signals_list_widget.currentRow())
 
-        print('\nLoading signal %s' % _signal_name)
+            print('\nLoading signal %s' % _signal_name)
 
-        signal = self.data_signals[_signal_index]
-        self.recalculate()
+            signal = self.data_signals[_signal_index]
+            self.recalculate()
 
-        x_lims = signal.get_x_lims()
-        self.x_lim_spin_box_1.setValue(x_lims[0])
-        self.x_lim_spin_box_2.setValue(x_lims[1])
-        self.statusbar.showMessage(
-            'Loaded signal %s.' % _signal_name, 10000)
+            x_lims = signal.get_x_lims()
+            self.x_lim_spin_box_1.setValue(x_lims[0])
+            self.x_lim_spin_box_2.setValue(x_lims[1])
+            self.statusbar.showMessage(
+                'Loaded signal %s.' % _signal_name, 10000)
 
-        self.x_centre_spin_box.setValue(signal.get_x_centre())
-        self.y_offset_double_spin_box.setValue(signal.get_y_offset())
-
+            self.x_centre_spin_box.setValue(signal.get_x_centre())
+            self.y_offset_double_spin_box.setValue(signal.get_y_offset())
+        except:
+            import traceback
+            print("Error loading signal:")
+            traceback.print_exc()
     def signal_options_changed(self):
         autosave = self.signal_options_autosave_check_box.isChecked()
         if autosave:
