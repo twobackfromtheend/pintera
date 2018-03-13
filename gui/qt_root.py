@@ -111,6 +111,8 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
         self.recalculate_push_button.clicked.connect(self.recalculate)
 
         self.y_offset_moving_radio_button.toggled.connect(self.toggle_y_offset_type)
+        self.lorentzian_radio_button.toggled.connect(self.recalculate)
+
         self.find_dps_push_button.clicked.connect(self.find_motor_dps_calibration)
 
         self.use_dist_as_x_checkbox.toggled.connect(self.toggle_x_dist)
@@ -120,7 +122,7 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
         _signal_index = self.signals_list_widget.currentRow()
         # print(_signal_name, self.signals_list_widget.currentRow())
 
-        print('Loading signal %s' % _signal_name)
+        print('\nLoading signal %s' % _signal_name)
 
         signal = self.data_signals[_signal_index]
         self.recalculate()
@@ -265,10 +267,13 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
         signal = self.data_signals[_signal_index]
 
         # TODO: Use indicated known_wavelength
-        known_wavelength = self.wavelength_double_spin_box.value()
+        known_wavelength = self.wavelength_double_spin_box.value() * 1e-9
         signal_plotter.plot_motor_step_dps_with_bins(signal, known_wavelength=known_wavelength)
+        print('1')
         signal_plotter.plot_motor_step_size_dps_per_peak(signal, known_wavelength=known_wavelength)
+        print('2')
         signal_plotter.plot_motor_step_size_fourier(signal, known_wavelength=known_wavelength)
+        print('3')
 
     def toggle_x_dist(self):
         use_dist_as_x = self.use_dist_as_x_checkbox.isChecked()

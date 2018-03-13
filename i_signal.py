@@ -167,7 +167,6 @@ class Signal:
             x, y = x_y
         y_max = np.max(y)
         amplitude = np.max(y)
-
         mean = np.sum(x * y) / np.sum(y)
         sigma = np.sqrt(np.abs(np.sum(y * (x - mean) ** 2) / np.sum(y)))
 
@@ -324,6 +323,24 @@ class Signal:
         dps_data = (_dpses, unique_dpses, unique_dpses_counts, dps_mean, dps_std)
         return steps_data, dps_data
 
+    def get_motor_step_size_fourier(self, known_wavelength, freq_limits=(2e-3, 1.5e-2)):
+
+        fourier = np.fft.fft(self.y)
+        freqs_full = np.fft.fftfreq(self.y.size, d=self.delta)
+
+        freq_filter = np.where(np.logical_and(freqs_full >= freq_limits[0], freqs_full <= freq_limits[1]))
+        frequencies = freqs_full[freq_filter]
+        magnitudes = abs(fourier[freq_filter])
+
+        # steps between peaks = 1 wavelength = 1 / freq
+        # dps = known_wavelength / (2 * 1 wavelength) = freq * known_wavelength / 2
+        _dpses = frequencies * known_wavelength / 2
+
+        scipy_fit, calc_fit = self.find_best_fit_gaussian(x_y=(_dpses, magnitudes))
+        print('DPS: Mean: %.4e, std: %.4e' % (scipy_fit[1], scipy_fit[2]))
+
+        return _dpses, scipy_fit, frequencies, magnitudes
+
     def get_investigation_data(self, sigma, dps, sigma_err=0, dps_err=0):
         """Pass the standard deviation of the gaussian fit in terms of motor_steps
         and the displacement per motor step"""
@@ -370,24 +387,6 @@ class Signal:
                 'mean_wavelength': mean_wavelength,
                 }
         return data
-
-    def get_motor_step_size_fourier(self, known_wavelength, freq_limits=(2e-3, 1.5e-2)):
-
-        fourier = np.fft.fft(self.y)
-        freqs_full = np.fft.fftfreq(self.y.size, d=self.delta)
-
-        freq_filter = np.where(np.logical_and(freqs_full >= freq_limits[0], freqs_full <= freq_limits[1]))
-        frequencies = freqs_full[freq_filter]
-        magnitudes = abs(fourier[freq_filter])
-
-        # steps between peaks = 1 wavelength = 1 / freq
-        # dps = known_wavelength / (2 * 1 wavelength) = freq * known_wavelength / 2
-        _dpses = frequencies * known_wavelength / 2
-
-        scipy_fit, calc_fit = signal.find_best_fit_gaussian(x_y=(_dpses, magnitudes))
-        print('DPS: Mean: %.4e, std: %.4e' % (scipy_fit[1], scipy_fit[2] ** 0.5))
-
-        return _dpses, scipy_fit, frequencies, magnitudes
 
 
 if __name__ == '__main__':
