@@ -59,6 +59,9 @@ NB. The DPS (and associated error) indicated in View Options is important and is
 		- spectral_width_m = spectral_width_hz * mean_wavelength^2 / c [m]
 
 
+## Others
+I've nicely added 3 fitting functions that can be imported into Origin that do an exponential, lorentzian, and gaussian fit (e.g. for exported maxes). These can be found in the fit_func folder. Copy the fit_func folder into your Origin User Files Folder, which for me was `C:\Users\Harry\Documents\OriginLab\2017\User Files\fitfunc`. There should be a shortcut to your user files folder in your start menu under `Origin\YEAR`.
+
 ## TODO
 Still adding analysis features.
 
