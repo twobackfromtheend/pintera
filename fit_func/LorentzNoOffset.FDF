@@ -1,0 +1,111 @@
+
+
+[General Information]
+Function Name = LorentzNoOffset
+Brief Description = 
+Function Source = N/A
+Number Of Parameters = 3
+Function Type = User-Defined
+Function Form = Expression
+Path = 
+Number Of Independent Variables = 1
+Number Of Dependent Variables = 1
+FunctionModel = Explicit
+
+
+[Fitting Parameters]
+Names = A,m,g
+Initial Values = 1(V),1(V),1(V)
+Meanings = Amplitude,mean,FWHM
+Lower Bounds = --(I, Off),--(I, Off),--(I, Off)
+Upper Bounds = --(I, Off),--(I, Off),--(I, Off)
+Naming Method = User-Defined
+Number Of Significant Digits = 0,0,0
+Unit = ,,
+Format = --,--,--
+CustomDisplay = --,--,--
+
+
+[Independent Variables]
+x = 
+
+
+[Dependent Variables]
+y = 
+
+
+[Formula]
+A / (1 + ((x - m)/g)^2)
+
+
+[Constraints]
+
+
+[Initializations]
+
+
+[After Fitting]
+
+
+[Constants]
+
+
+[Controls]
+General Linear Constraints = 0
+Initialization Scripts = off
+Scripts After Fitting = off
+Number Of Duplicates = N/A
+Duplicate Offset = N/A
+Duplicate Unit = N/A
+Generate Curves After Fitting = Yes
+Curve Point Spacing = Uniform on X-Axis Scale
+Generate Peaks After Fitting = Yes
+Generate Peaks During Fitting = Yes
+Generate Peaks with Baseline = Yes
+Paste Parameters to Plot After Fitting = Yes
+Paste Parameters to Notes Window After Fitting = Yes
+Generate Residuals After Fitting = No
+Keep Parameters = No
+Compile On Param Change Script = 1
+Enable Parameters Initialization = 1
+Treat All Numbers As Double = on
+Use Initial Formula = 1
+AllowInitializingFixedParameters = 0
+
+
+
+[Compile Function]
+Compile = 0
+Compile Parameters Initialization = 1
+OnParamChangeScriptsEnabled = 0
+
+
+[Parameters Initialization]
+A = YMAX;
+m = XATYMAX;
+g = PWIDTH;
+
+
+[Origin C Function Header]
+
+
+[Origin C Parameter Initialization Header]
+
+
+
+
+
+[Derived Parameter Settings]
+Unit = 
+Names = 
+Meanings = 
+
+
+
+
+
+[QuickCheck]
+x=1
+A=1
+m=1
+g=1
