@@ -111,7 +111,9 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
         self.recalculate_push_button.clicked.connect(self.recalculate)
 
         self.y_offset_moving_radio_button.toggled.connect(self.toggle_y_offset_type)
-        self.exponential_radio_button.toggled.connect(self.recalculate)
+        self.exponential_radio_button.toggled.connect(self.toggle_fit_type)
+        self.lorentzian_radio_button.toggled.connect(self.toggle_fit_type)
+        self.gaussian_radio_button.toggled.connect(self.toggle_fit_type)
         self.fit_beat_check_box.toggled.connect(self.toggle_use_beating_freq)
 
         self.find_dps_push_button.clicked.connect(self.find_motor_dps_calibration)
@@ -200,7 +202,6 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
                                                beating=self.fit_beat_check_box.isChecked())
         self.plot_widget.canvas.draw()
 
-
         # update spinboxes
         # fit
         sigma = scipy_fit[2]
@@ -214,13 +215,18 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
                 print("SciPy fit does not contain beating freq (len=%s, not >3" % len(scipy_fit))
         # data
         if self.use_dist_as_x_checkbox.isChecked():
-            sigma = sigma / dps  # return to in terms of motor steps if sigma is in terms of dps
+            # return sigma to in terms of motor steps if sigma is in terms of dps
+            # get_investigation_data uses sigma in terms of motor steps
+            if fit_type == 'exponential':
+                sigma = sigma * dps
+            else:
+                sigma = sigma / dps
 
         dps, dps_err = self.dps_spin_box.value() * 1e-9, self.dps_pm_spin_box.value() * 1e-9
         if dps_err != 0:
-            data = signal.get_investigation_data(sigma, dps, dps_err=dps_err)
+            data = signal.get_investigation_data(sigma, dps, dps_err=dps_err, fit_type=fit_type)
         else:
-            data = signal.get_investigation_data(sigma, dps)
+            data = signal.get_investigation_data(sigma, dps, fit_type=fit_type)
         self.data_coherence_length_spin_box.setValue(data['coherence_length'] * 1e6)
         self.data_spectral_width_thz_spin_box.setValue(data['spectral_width_hz'] * 1e-12)
         self.data_spectral_width_nm_spin_box.setValue(data['spectral_width_m'] * 1e9)
@@ -276,6 +282,17 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
             self.calculated_y_offset_label.setDisabled(False)
 
         self.recalculate()
+
+    def toggle_fit_type(self):
+        if self.sender().isChecked():
+            if self.exponential_radio_button.isChecked():
+                self.fit_s_label.setText(u'\u03b3')
+            elif self.lorentzian_radio_button.isChecked():
+                self.fit_s_label.setText(u'\u03b3')
+            elif self.gaussian_radio_button.isChecked():
+                self.fit_s_label.setText(u'\u03c3')
+
+            self.recalculate()
 
     def toggle_use_beating_freq(self):
         if self.fit_beat_check_box.isChecked():

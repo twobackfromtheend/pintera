@@ -362,6 +362,9 @@
              </property>
              <item>
               <widget class="QRadioButton" name="exponential_radio_button">
+               <property name="toolTip">
+                <string>A * exp(-γ * abs(x - m))</string>
+               </property>
                <property name="text">
                 <string>Exponential</string>
                </property>
@@ -372,8 +375,8 @@
              </item>
              <item>
               <widget class="QRadioButton" name="lorentzian_radio_button">
-               <property name="toolTipDuration">
-                <number>3</number>
+               <property name="toolTip">
+                <string>A / (1 + ((x - m) / γ)^2)</string>
                </property>
                <property name="text">
                 <string>Lorentzian</string>
@@ -385,6 +388,9 @@
              </item>
              <item>
               <widget class="QRadioButton" name="gaussian_radio_button">
+               <property name="toolTip">
+                <string>A * exp(-(x - m)^2 / (2 * σ^2))</string>
+               </property>
                <property name="text">
                 <string>Gaussian</string>
                </property>
@@ -395,6 +401,9 @@
           </item>
           <item>
            <widget class="QCheckBox" name="fit_beat_check_box">
+            <property name="toolTip">
+             <string> * cos(2πf * x - m)</string>
+            </property>
             <property name="text">
              <string>Fit Beating</string>
             </property>
@@ -560,9 +569,12 @@
          </property>
          <layout class="QGridLayout" name="gridLayout_3">
           <item row="2" column="0">
-           <widget class="QLabel" name="label_10">
+           <widget class="QLabel" name="fit_s_label">
             <property name="text">
-             <string>Sigma/gamma</string>
+             <string>γ</string>
+            </property>
+            <property name="textFormat">
+             <enum>Qt::RichText</enum>
             </property>
            </widget>
           </item>
@@ -577,7 +589,7 @@
            </widget>
           </item>
           <item row="1" column="0">
-           <widget class="QLabel" name="label_9">
+           <widget class="QLabel" name="fit_m_label">
             <property name="text">
              <string>Mean</string>
             </property>
@@ -604,7 +616,7 @@
            </widget>
           </item>
           <item row="0" column="0">
-           <widget class="QLabel" name="label_8">
+           <widget class="QLabel" name="fit_a_label">
             <property name="text">
              <string>Amplitude</string>
             </property>

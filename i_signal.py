@@ -383,22 +383,36 @@ class Signal:
 
         return _dpses, scipy_fit, frequencies, magnitudes
 
-    def get_investigation_data(self, gamma, dps, gamma_err=0, dps_err=0, fit_type='lorentzian'):
+    def get_investigation_data(self, gamma, dps, gamma_err=0, dps_err=0, fit_type='exponential'):
         """Pass the standard deviation of the gaussian fit in terms of motor_steps
         and the displacement per motor step"""
-        if fit_type == 'lorentzian':
-            coherence_length_in_motor_steps = gamma
+        if fit_type == 'exponential':
+            coherence_length = 2 * np.log(2) / (gamma / dps)
+
+            # fourier transform of an exponential decay with decay constant g = lorentzian with hwhm g
+            # decay constant = 1/g
+            # Fourier(exp(-2pi k0 x)) = (1/pi)(k0 / (k^2 + k0^2))
+            # 2 pi k0 = g, k0 = hwhm = g / (2 pi)
+            # fwhm = g / pi (*c)
+            spectral_width_hz = (gamma / dps) / np.pi * constants.c
+
+        elif fit_type == 'lorentzian':
+            coherence_length_in_motor_steps = 2 * gamma
+            coherence_length = coherence_length_in_motor_steps * dps  # in metres
+
+            spectral_width_hz = constants.c / (np.pi * coherence_length)
+
         elif fit_type == 'gaussian':
             # gamma is actually sigma
             coherence_length_in_motor_steps = 2 * np.sqrt(2 * np.log(2)) * gamma
+            coherence_length = coherence_length_in_motor_steps * dps  # in metres
 
-        coherence_length = coherence_length_in_motor_steps * dps  # in metres
+            spectral_width_hz = constants.c / (np.pi * coherence_length)
 
         steps, unique_steps_between_peaks, unique_steps_counts = self.get_steps_between_peaks()
 
         distances = dps * steps
         # distances_mean, distances_std = np.mean(distances), np.std(distances)
-
         wavelengths = distances * 2
         wavelengths_mean, wavelengths_std = np.mean(wavelengths), np.std(wavelengths)
 
@@ -407,7 +421,6 @@ class Signal:
         frequencies = constants.c / wavelengths
         frequencies_mean, frequencies_std = np.mean(frequencies), np.std(frequencies)
 
-        spectral_width_hz = constants.c / (np.pi * coherence_length)
         spectral_width_m = mean_wavelength ** 2 / constants.c * spectral_width_hz
         print('spec_width (Hz): %.5e' % spectral_width_hz)
         print('spec_width (m): %.5e' % spectral_width_m)
