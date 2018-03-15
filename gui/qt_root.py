@@ -121,6 +121,10 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.use_dist_as_x_checkbox.toggled.connect(self.toggle_x_dist)
 
+        self.export_maxes_push_button.clicked.connect(self.export_to_clipboard)
+        self.export_steps_push_button.clicked.connect(self.export_to_clipboard)
+        self.export_ft_push_button.clicked.connect(self.export_to_clipboard)
+
     def load_selected_signal(self):
         try:
             _signal_name = self.signals_list_widget.currentItem().text()
@@ -281,11 +285,6 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
         # print(text)
         cb.setText(text, mode=cb.Clipboard)
 
-        # clipboard = QtCore.QApplication.clipboard()
-        # clipboard.setText(text)
-        # event = QtCore.QEvent(QtCore.QEvent.Clipboard)
-        # app.sendEvent(clipboard, event)
-
     def toggle_y_offset_type(self):
         if self.y_offset_moving_radio_button.isChecked():
             self.y_offset_double_spin_box.setDisabled(True)
@@ -351,3 +350,24 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
             self.dps_spin_box.setDisabled(True)
 
         self.recalculate()
+
+    def export_to_clipboard(self):
+        _signal_name = self.signals_list_widget.currentItem().text()
+        _signal_index = self.signals_list_widget.currentRow()
+        # print(_signal_name, self.signals_list_widget.currentRow())
+
+        signal = self.data_signals[_signal_index]
+
+        if self.sender() is self.export_maxes_push_button:
+            text = signal.as_string(*signal.get_local_maxes())
+        elif self.sender() is self.export_steps_push_button:
+            text = signal.as_string(*signal.get_steps_between_peaks()[1:], fmt=('%i', '%i'))
+        elif self.sender() is self.export_ft_push_button:
+            try:
+                _, _, frequencies, magnitudes = signal.get_motor_step_dps_with_fourier(known_wavelength=2)
+                text = signal.as_string(frequencies, magnitudes, fmt=('%.18e', '%.18e'))
+            except Exception as e:
+                print(e)
+        cb = QtWidgets.QApplication.clipboard()
+        cb.clear(mode=cb.Clipboard)
+        cb.setText(text, mode=cb.Clipboard)

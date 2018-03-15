@@ -300,11 +300,11 @@ class Signal:
         return dps, bin_width
 
     @staticmethod
-    def as_string(*args):
+    def as_string(*args, fmt=('%i', '%.18e')):
         # returns a string that can be pasted into Excel/Origin/other stuff (tab as delimiter)
         _s = io.BytesIO()
         data = np.column_stack(args)
-        np.savetxt(_s, data, fmt=('%i', '%.18e'), delimiter='\t')
+        np.savetxt(_s, data, fmt=fmt, delimiter='\t')
         return _s.getvalue().decode()
 
     def get_steps_between_peaks(self):
@@ -381,7 +381,6 @@ class Signal:
 
         scipy_fit, calc_fit = self.find_best_fit_gaussian(x_y=(_dpses, magnitudes))
         print('DPS: Mean: %.4e, std: %.4e' % (scipy_fit[1], scipy_fit[2]))
-
         return _dpses, scipy_fit, frequencies, magnitudes
 
     def get_investigation_data(self, gamma, dps, gamma_err=0, dps_err=0, fit_type='exponential'):

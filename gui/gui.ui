@@ -433,7 +433,7 @@
              <item>
               <widget class="QCheckBox" name="use_abs_checkbox">
                <property name="toolTip">
-                <string>Use absolute values (so negative side of spectra is used too). Not compatible with moving y offset.</string>
+                <string>Use absolute values (so negative side of spectra is used too). Not compatible with moving y offset. Also screws up Mean Freq, Mean Wavelength, Spectral Width (nm) calculations below.</string>
                </property>
                <property name="text">
                 <string>Use absolute values</string>
@@ -718,7 +718,7 @@
           <item row="2" column="0" rowspan="2">
            <widget class="QLabel" name="label_3">
             <property name="toolTip">
-             <string>c * coherence length / lambda^2</string>
+             <string/>
             </property>
             <property name="text">
              <string>Spectral width</string>
@@ -877,9 +877,23 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_4">
           <item>
-           <widget class="QPushButton" name="pushButton_2">
+           <widget class="QPushButton" name="export_maxes_push_button">
             <property name="text">
              <string>Maxes</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="export_steps_push_button">
+            <property name="text">
+             <string>Steps between maxima</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="export_ft_push_button">
+            <property name="text">
+             <string>Fourier Transform</string>
             </property>
            </widget>
           </item>
