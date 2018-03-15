@@ -12,7 +12,7 @@ current_patches = []
 
 
 def plot_signal(signal, ax, fig=None, plot_style='x-', plot_max=True, show_full_y=False, toolbar=None, plot_fit=True,
-                dps=None, fit_type='lorentzian'):
+                dps=None, fit_type='exponential', beating=False):
     if ax is None:
         pass
         # ax = plt.gca()
@@ -68,8 +68,10 @@ def plot_signal(signal, ax, fig=None, plot_style='x-', plot_max=True, show_full_
             scipy_fit = plot_best_fit_lorentzian(signal, ax, dps=dps)
         elif fit_type == 'gaussian':
             scipy_fit = plot_best_fit_gaussian(signal, ax, dps=dps)
+        elif fit_type == 'exponential':
+            scipy_fit = plot_best_fit_exponential(signal, ax, dps=dps, beating=beating)
         else:
-            print('fit_type not specified in signal_plotter.plot_signal')
+            print('fit_type (%s) unknown. In signal_plotter.plot_signal' % fit_type)
 
     ax.set_xlim((x_min, x_max))
     ax.set_ylim((y_min, y_max))
@@ -115,7 +117,7 @@ def plot_best_fit_gaussian(signal, ax, dps=None):
     x_min, x_max = ax.get_xlim()
     scipy_fit, calc_fit = signal.find_best_fit_gaussian(also_use_scipy=True)
     print(
-        'Fits:  \tScipy: \t\t\t%.5e, \t%.5e, \t%.5e,\n\t\tCalculated: \t%.5e, \t%.5e, \t%.5e' % (*scipy_fit, *calc_fit))
+        'Fits:  \tSciPy: \t\t\t%.5e, \t%.5e, \t%.5e,\n\t\tCalculated: \t%.5e, \t%.5e, \t%.5e' % (*scipy_fit, *calc_fit))
 
     if dps is not None:
         # calc_fit = calc_fit[0], calc_fit[1] * dps, calc_fit[2] * dps
@@ -142,7 +144,7 @@ def plot_best_fit_lorentzian(signal, ax, dps=None):
     x_min, x_max = ax.get_xlim()
     (amplitude, mean, gamma) = signal.find_best_fit_lorentzian()
     scipy_fit = (amplitude, mean, gamma)
-    print('Fits:  \tScipy: \t\t%.5e, \t%.5e, \t%.5e,' % scipy_fit)
+    print('Fits:  \tSciPy: \t\t%.5e, \t%.5e, \t%.5e' % scipy_fit)
 
     if dps is not None:
         scipy_fit = scipy_fit[0], scipy_fit[1] * dps, scipy_fit[2] * dps
@@ -154,6 +156,32 @@ def plot_best_fit_lorentzian(signal, ax, dps=None):
     fit_x = np.linspace(x_min, x_max, 10000)
     optimised_gaussian_fit = lorentzian_fit(scipy_fit, fit_x)
     ax.plot(fit_x, optimised_gaussian_fit, 'k', label='SciPy fit (Lorentzian)')
+    return scipy_fit
+
+
+def plot_best_fit_exponential(signal, ax, dps=None, beating=True):
+    x_min, x_max = ax.get_xlim()
+    scipy_fit = tuple(signal.find_best_fit_exponential(beating=beating))
+    if beating:
+        print('Fits:  \tSciPy: \t\t%.5e, \t%.5e, \t%.5e, \t%.5e' % scipy_fit)
+    else:
+        print('Fits:  \tSciPy: \t\t%.5e, \t%.5e, \t%.5e' % scipy_fit)
+
+    if dps is not None:
+        scipy_fit = scipy_fit[0], scipy_fit[1] * dps, scipy_fit[2] * dps
+
+    if beating:
+        # fit_params is (amplitude, mean, decay_constant, beating_freq)
+        exp_fit = lambda fit_params, x: fit_params[0] * np.exp(-fit_params[2] * np.fabs(x - fit_params[1])) * \
+                                        np.fabs(np.cos(2 * np.pi * (x - fit_params[1]) * fit_params[3]))
+    else:
+        # fit_params is (amplitude, mean, decay_constant)
+        exp_fit = lambda fit_params, x: fit_params[0] * np.exp(-fit_params[2] * np.fabs(x - fit_params[1]))
+
+    # plot scipy
+    fit_x = np.linspace(x_min, x_max, 10000)
+    optimised_gaussian_fit = exp_fit(scipy_fit, fit_x)
+    ax.plot(fit_x, optimised_gaussian_fit, 'k', label='SciPy fit (Exponential)')
     return scipy_fit
 
 

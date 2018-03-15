@@ -229,6 +229,50 @@ class Signal:
 
             return fitted_params
 
+    def find_best_fit_exponential(self, save=True, x_y=None, beating=True):
+        """
+        Returns scipy_fit: (amplitude, mean, decay_constant, [beating_freq]). (beating_freq
+
+        SciPy fit generated using scipy.optimise, optimising all of amplitude, mean, and gamma.
+        Calculated fit calculates the mean and sigma^2 using formulae, and takes the max(y) as amplitude.
+
+        Uses get_local_maxes to get x and y unless x_y is passed.
+        """
+        if x_y is None:
+            x, y = self.get_local_maxes()
+        else:
+            x, y = x_y
+        y_max = np.max(y)
+
+        mean = np.sum(x * y) / np.sum(y)
+        sigma = np.sqrt(np.abs(np.sum(y * (x - mean) ** 2) / np.sum(y)))
+
+        if beating:
+            # fit_params is (amplitude, mean, decay_constant, beating_freq)
+            exp_fit = lambda fit_params, x: fit_params[0] * np.exp(-fit_params[2] * np.fabs(x - fit_params[1])) * \
+                                            np.fabs(np.cos(2 * np.pi * (x - fit_params[1]) * fit_params[3]))
+            err_func = lambda fit_params, x, y: exp_fit(fit_params, x) - y  # Distance to the target function
+            initial_parameters = [y_max, mean, 1 / sigma, 1 / (4 * sigma)]
+            fitted_params, success = optimize.leastsq(err_func, initial_parameters[:], args=(x, y))
+            if save:
+                self.config['exponential_fit_amplitude'] = str(fitted_params[0])
+                self.config['exponential_fit_mean'] = str(fitted_params[1])
+                self.config['exponential_fit_decay_constant'] = str(fitted_params[2])
+                self.config['exponential_fit_beating_freq'] = str(fitted_params[3])
+
+        else:
+            # fit_params is (amplitude, mean, decay_constant)
+            exp_fit = lambda fit_params, x: fit_params[0] * np.exp(-fit_params[2] * np.fabs(x - fit_params[1]))
+            err_func = lambda fit_params, x, y: exp_fit(fit_params, x) - y  # Distance to the target function
+            initial_parameters = [y_max, mean, 1 / sigma]
+            fitted_params, success = optimize.leastsq(err_func, initial_parameters[:], args=(x, y))
+            if save:
+                self.config['exponential_fit_amplitude'] = str(fitted_params[0])
+                self.config['exponential_fit_mean'] = str(fitted_params[1])
+                self.config['exponential_fit_decay_constant'] = str(fitted_params[2])
+
+        return fitted_params
+
     def find_step_size(self, known_wavelength=546.1E-9, bins=1):
         # dt = lambda / 2
         # displacement per step = peaks / steps * lambda / 2

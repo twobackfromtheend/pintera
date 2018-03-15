@@ -111,7 +111,8 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
         self.recalculate_push_button.clicked.connect(self.recalculate)
 
         self.y_offset_moving_radio_button.toggled.connect(self.toggle_y_offset_type)
-        self.lorentzian_radio_button.toggled.connect(self.recalculate)
+        self.exponential_radio_button.toggled.connect(self.recalculate)
+        self.fit_beat_check_box.toggled.connect(self.toggle_use_beating_freq)
 
         self.find_dps_push_button.clicked.connect(self.find_motor_dps_calibration)
 
@@ -140,6 +141,7 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
             import traceback
             print("Error loading signal:")
             traceback.print_exc()
+
     def signal_options_changed(self):
         autosave = self.signal_options_autosave_check_box.isChecked()
         if autosave:
@@ -185,6 +187,8 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
             fit_type = 'lorentzian'
         elif self.gaussian_radio_button.isChecked():
             fit_type = 'gaussian'
+        elif self.exponential_radio_button.isChecked():
+            fit_type = 'exponential'
         else:
             print('Neither lorentzian nor gaussian checked (in qt_root draw_signal)')
 
@@ -192,8 +196,10 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
                                                fig=self.plot_widget.canvas.fig,
                                                toolbar=self.toolbar,
                                                dps=dps,
-                                               fit_type=fit_type)
+                                               fit_type=fit_type,
+                                               beating=self.fit_beat_check_box.isChecked())
         self.plot_widget.canvas.draw()
+
 
         # update spinboxes
         # fit
@@ -201,6 +207,11 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
         self.fit_a_double_spin_box.setValue(scipy_fit[0])
         self.fit_m_double_spin_box.setValue(scipy_fit[1])
         self.fit_s_double_spin_box.setValue(sigma)
+        if self.fit_beat_check_box.isChecked():
+            if len(scipy_fit) > 3:
+                self.fit_beat_freq_double_spin_box.setValue(scipy_fit[3])
+            else:
+                print("SciPy fit does not contain beating freq (len=%s, not >3" % len(scipy_fit))
         # data
         if self.use_dist_as_x_checkbox.isChecked():
             sigma = sigma / dps  # return to in terms of motor steps if sigma is in terms of dps
@@ -266,6 +277,16 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.recalculate()
 
+    def toggle_use_beating_freq(self):
+        if self.fit_beat_check_box.isChecked():
+            self.fit_beat_freq_label.setDisabled(False)
+            self.fit_beat_freq_double_spin_box.setDisabled(False)
+        else:
+            self.fit_beat_freq_label.setDisabled(True)
+            self.fit_beat_freq_double_spin_box.setDisabled(True)
+
+        self.recalculate()
+
     def find_motor_dps_calibration(self):
         _signal_name = self.signals_list_widget.currentItem().text()
         _signal_index = self.signals_list_widget.currentRow()
@@ -273,7 +294,6 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
 
         signal = self.data_signals[_signal_index]
 
-        # TODO: Use indicated known_wavelength
         known_wavelength = self.wavelength_double_spin_box.value() * 1e-9
         signal_plotter.plot_motor_step_dps_with_bins(signal, known_wavelength=known_wavelength)
         signal_plotter.plot_motor_step_dps_per_peak(signal, known_wavelength=known_wavelength)
