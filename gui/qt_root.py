@@ -363,11 +363,8 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
         elif self.sender() is self.export_steps_push_button:
             text = signal.as_string(*signal.get_steps_between_peaks()[1:], fmt=('%i', '%i'))
         elif self.sender() is self.export_ft_push_button:
-            try:
-                _, _, frequencies, magnitudes = signal.get_motor_step_dps_with_fourier(known_wavelength=2)
-                text = signal.as_string(frequencies, magnitudes, fmt=('%.18e', '%.18e'))
-            except Exception as e:
-                print(e)
+            _, _, frequencies, magnitudes = signal.get_motor_step_dps_with_fourier(known_wavelength=2)
+            text = signal.as_string(frequencies, magnitudes, fmt=('%.18e', '%.18e'))
         cb = QtWidgets.QApplication.clipboard()
         cb.clear(mode=cb.Clipboard)
         cb.setText(text, mode=cb.Clipboard)
