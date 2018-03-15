@@ -1,0 +1,108 @@
+
+
+[General Information]
+Function Name = BeatingExpDecayNoOffset
+Brief Description = 
+Function Source = N/A
+Number Of Parameters = 4
+Function Type = User-Defined
+Function Form = Expression
+Path = 
+Number Of Independent Variables = 1
+Number Of Dependent Variables = 1
+Function Model = Explicit
+
+
+[Fitting Parameters]
+Names = A,m,g,f
+Initial Values = 1(V),1(V),1(V),1(V)
+Meanings = amplitude,mean,decay constant,f
+Lower Bounds = --(I, Off),--(I, Off),--(I, Off),--(I, Off)
+Upper Bounds = --(I, Off),--(I, Off),--(I, Off),--(I, Off)
+Naming Method = User-Defined
+Number Of Significant Digits = 0,0,0,0
+Unit = ,,,
+Format = --,--,--,--
+CustomDisplay = --,--,--,--
+
+
+[Independent Variables]
+x = 
+
+
+[Dependent Variables]
+y = 
+
+
+[Formula]
+A * exp(-g * abs(x-m)) * abs(cos(2 * pi * (x - m) * f))
+
+
+[Constraints]
+
+
+[Initializations]
+
+
+[After Fitting]
+
+
+[Constants]
+
+
+[Controls]
+General Linear Constraints = 0
+Initialization Scripts = 0
+Scripts After Fitting = 0
+Number Of Duplicates = N/A
+Duplicate Offset = N/A
+Duplicate Unit = N/A
+Generate Curves After Fitting = 1
+Curve Point Spacing = Uniform on X-Axis Scale
+Generate Peaks After Fitting = 1
+Generate Peaks During Fitting = 1
+Generate Peaks with Baseline = 1
+Paste Parameters to Plot After Fitting = 1
+Paste Parameters to Notes Window After Fitting = 1
+Generate Residuals After Fitting = 0
+Keep Parameters = 0
+Compile On Param Change Script = 1
+Enable Parameters Initialization = 1
+Treat All Numbers As Double = 1
+Use Initial Formula = 1
+AllowInitializingFixedParameters = 0
+
+
+[Compile Function]
+Compile = 0
+Compile Parameters Initialization = 1
+OnParamChangeScriptsEnabled = 0
+
+
+[Parameters Initialization]
+A = YMAX;
+m = PCENTER;
+g = 1/PWIDTH;
+f = 1/(4*PWIDTH);
+
+
+[Origin C Function Header]
+
+
+[Origin C Parameter Initialization Header]
+
+
+[Derived Parameter Settings]
+Unit = 
+Names = 
+Meanings = 
+
+
+
+[QuickCheck]
+x=1
+A=1
+m=1
+g=1
+f=1
+
