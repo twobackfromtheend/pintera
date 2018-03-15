@@ -115,6 +115,7 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
         self.lorentzian_radio_button.toggled.connect(self.toggle_fit_type)
         self.gaussian_radio_button.toggled.connect(self.toggle_fit_type)
         self.fit_beat_check_box.toggled.connect(self.toggle_use_beating_freq)
+        self.use_abs_checkbox.toggled.connect(self.recalculate)
 
         self.find_dps_push_button.clicked.connect(self.find_motor_dps_calibration)
 
@@ -265,7 +266,11 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
         # if use_moving_y_offset:
         #     moving_y_offset_wavelengths = self.y_offset_wavelengths_spin_box.value()
         moving_y_offset_wavelengths = self.y_offset_wavelengths_spin_box.value() if self.y_offset_moving_radio_button.isChecked() else None
-        signal.preprocess_xy(moving_y_offset_wavelengths=moving_y_offset_wavelengths)
+
+        if self.use_abs_checkbox.isChecked():
+            signal.preprocess_xy(use_abs=True)
+        else:
+            signal.preprocess_xy(moving_y_offset_wavelengths=moving_y_offset_wavelengths)
         self.draw_signal(signal)
 
         # COPY SIGNAL DATA

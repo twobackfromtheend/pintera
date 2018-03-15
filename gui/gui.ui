@@ -400,13 +400,47 @@
            </widget>
           </item>
           <item>
-           <widget class="QCheckBox" name="fit_beat_check_box">
-            <property name="toolTip">
-             <string> * cos(2πf * x - m)</string>
+           <widget class="QFrame" name="frame_7">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
             </property>
-            <property name="text">
-             <string>Fit Beating</string>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
             </property>
+            <layout class="QHBoxLayout" name="horizontalLayout_9">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="QCheckBox" name="fit_beat_check_box">
+               <property name="toolTip">
+                <string> * cos(2πf * x - m)</string>
+               </property>
+               <property name="text">
+                <string>Fit Beating</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="use_abs_checkbox">
+               <property name="toolTip">
+                <string>Use absolute values (so negative side of spectra is used too). Not compatible with moving y offset.</string>
+               </property>
+               <property name="text">
+                <string>Use absolute values</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </widget>
           </item>
           <item>
