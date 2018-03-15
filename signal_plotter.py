@@ -168,7 +168,10 @@ def plot_best_fit_exponential(signal, ax, dps=None, beating=True):
         print('Fits:  \tSciPy: \t\t%.5e, \t%.5e, \t%.5e' % scipy_fit)
 
     if dps is not None:
-        scipy_fit = scipy_fit[0], scipy_fit[1] * dps, scipy_fit[2] / dps
+        if beating:
+            scipy_fit = scipy_fit[0], scipy_fit[1] * dps, scipy_fit[2] / dps, scipy_fit[3] / dps
+        else:
+            scipy_fit = scipy_fit[0], scipy_fit[1] * dps, scipy_fit[2] / dps
 
     if beating:
         # fit_params is (amplitude, mean, decay_constant, beating_freq)

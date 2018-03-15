@@ -194,13 +194,25 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
         else:
             print('Neither lorentzian nor gaussian checked (in qt_root draw_signal)')
 
-        scipy_fit = signal_plotter.plot_signal(signal, self.plot_widget.canvas.ax,
-                                               fig=self.plot_widget.canvas.fig,
-                                               toolbar=self.toolbar,
-                                               dps=dps,
-                                               fit_type=fit_type,
-                                               beating=self.fit_beat_check_box.isChecked())
-        self.plot_widget.canvas.draw()
+        separate_plot = self.separate_plot_checkbox.isChecked()
+        if separate_plot:
+            import matplotlib.pyplot as plt
+            fig, ax = plt.subplots()
+            scipy_fit = signal_plotter.plot_signal(signal, ax,
+                                                   fig=fig,
+                                                   toolbar=self.toolbar,
+                                                   dps=dps,
+                                                   fit_type=fit_type,
+                                                   beating=self.fit_beat_check_box.isChecked())
+            plt.show()
+        else:
+            scipy_fit = signal_plotter.plot_signal(signal, self.plot_widget.canvas.ax,
+                                                   fig=self.plot_widget.canvas.fig,
+                                                   toolbar=self.toolbar,
+                                                   dps=dps,
+                                                   fit_type=fit_type,
+                                                   beating=self.fit_beat_check_box.isChecked())
+            self.plot_widget.canvas.draw()
 
         # update spinboxes
         # fit
