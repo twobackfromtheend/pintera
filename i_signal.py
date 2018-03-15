@@ -28,7 +28,6 @@ class Signal:
 
         # parse signal first - to get errors before config is created.
         self.x_full, self.y_full, self.delta = dio.get_x_y_delta(self.file_path, v=False)
-
         # create config if not created
         if self.file_name not in self.base_config:
             self.base_config.add_section(self.file_name)
@@ -39,7 +38,7 @@ class Signal:
 
         self.base_config.write()
 
-    def preprocess_xy(self, moving_y_offset_wavelengths=None):
+    def preprocess_xy(self, moving_y_offset_wavelengths=None, use_abs=False):
         """Returns preprocessed x and y, based on the config"""
         x, y = self.x_full, self.y_full
         # remove boundary signals
@@ -55,6 +54,8 @@ class Signal:
         # shift to around x axis
         self.y_offset = np.mean(y)
         norm_y = y - self.y_offset
+        if use_abs:
+            norm_y = np.fabs(norm_y)
         self.config['y_offset'] = str(self.y_offset)
         self.x = x
         self.y = norm_y
