@@ -154,8 +154,8 @@ def plot_best_fit_lorentzian(signal, ax, dps=None):
 
     # plot scipy
     fit_x = np.linspace(x_min, x_max, 10000)
-    optimised_gaussian_fit = lorentzian_fit(scipy_fit, fit_x)
-    ax.plot(fit_x, optimised_gaussian_fit, 'k', label='SciPy fit (Lorentzian)')
+    optimised_lorentzian_fit = lorentzian_fit(scipy_fit, fit_x)
+    ax.plot(fit_x, optimised_lorentzian_fit, 'k', label='SciPy fit (Lorentzian)')
     return scipy_fit
 
 
@@ -229,7 +229,7 @@ def plot_motor_step_dps_with_bins(signal, known_wavelength=None):
     return dps_5_10_mean, dps_5_10_err
 
 
-def plot_motor_step_dps_per_peak(signal, known_wavelength=546.1e-9):
+def plot_motor_step_dps_per_peak(signal, known_wavelength=546.22e-9):
     print('Plotting motor step dps per peak')
 
     steps_data, dps_data = signal.get_motor_step_dps_per_peak(known_wavelength)
@@ -262,10 +262,8 @@ def plot_motor_step_dps_per_peak(signal, known_wavelength=546.1e-9):
 
     # Plot 2:
     ax2 = fig.add_subplot(122)
+    # fig, ax2 = plt.subplots(figsize=(10,5))
     # plot dps from each "motor step between peaks"
-    gaussian_fit = lambda fit_params, x: fit_params[0] / np.sqrt(2 * np.pi * fit_params[2] ** 2) * np.exp(
-        -(x - fit_params[1]) ** 2 / (2 * fit_params[2] ** 2))
-
     ax2.plot(unique_dpses, unique_dpses_counts, '.')
     x_min, x_max = plt.gca().get_xlim()
 
@@ -293,7 +291,7 @@ def plot_motor_step_dps_per_peak(signal, known_wavelength=546.1e-9):
     plt.show()
 
 
-def plot_motor_step_dps_with_fourier(signal, known_wavelength=546.1e-9):
+def plot_motor_step_dps_with_fourier(signal, known_wavelength=546.22e-9):
     print('Plotting motor step dps with fourier')
 
     _dpses, scipy_fit, frequencies, magnitudes = signal.get_motor_step_dps_with_fourier(known_wavelength)
@@ -325,6 +323,7 @@ def plot_motor_step_dps_with_fourier(signal, known_wavelength=546.1e-9):
     ax2.set_title('Plot of occurrence of DPS in signal against DPS')
     ax2.set_ylabel('Magnitude')
     ax2.set_xlabel('Displacement per Step (m)')
+
 
     # ax3 = plt.subplot(212)
     ax3 = fig.add_subplot(212)

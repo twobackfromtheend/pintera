@@ -877,6 +877,13 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_4">
           <item>
+           <widget class="QPushButton" name="export_full_push_button">
+            <property name="text">
+             <string>Full</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="export_maxes_push_button">
             <property name="text">
              <string>Maxes</string>

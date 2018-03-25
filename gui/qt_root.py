@@ -121,6 +121,7 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
 
         self.use_dist_as_x_checkbox.toggled.connect(self.toggle_x_dist)
 
+        self.export_full_push_button.clicked.connect(self.export_to_clipboard)
         self.export_maxes_push_button.clicked.connect(self.export_to_clipboard)
         self.export_steps_push_button.clicked.connect(self.export_to_clipboard)
         self.export_ft_push_button.clicked.connect(self.export_to_clipboard)
@@ -357,8 +358,9 @@ class Analyser(QtWidgets.QMainWindow, Ui_MainWindow):
         # print(_signal_name, self.signals_list_widget.currentRow())
 
         signal = self.data_signals[_signal_index]
-
-        if self.sender() is self.export_maxes_push_button:
+        if self.sender() is self.export_full_push_button:
+            text = signal.as_string(signal.x, signal.y)
+        elif self.sender() is self.export_maxes_push_button:
             text = signal.as_string(*signal.get_local_maxes())
         elif self.sender() is self.export_steps_push_button:
             text = signal.as_string(*signal.get_steps_between_peaks()[1:], fmt=('%i', '%i'))

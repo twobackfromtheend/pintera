@@ -176,7 +176,7 @@ class Signal:
                 # TODO: Allow fixed mean optimisation
                 pass
             else:
-                # fit_params is (amplitude, mean, sigma2)
+                # fit_params is (amplitude, mean, sigma)
                 gaussian_fit = lambda fit_params, x: fit_params[0] * np.exp(
                     -(x - fit_params[1]) ** 2 / (2 * fit_params[2] ** 2))
                 err_func = lambda fit_params, x, y: gaussian_fit(fit_params, x) - y  # Distance to the target function
@@ -255,6 +255,7 @@ class Signal:
             err_func = lambda fit_params, x, y: exp_fit(fit_params, x) - y  # Distance to the target function
             initial_parameters = [y_max, mean, 1 / sigma, 1 / (4 * sigma)]
             fitted_params, success = optimize.leastsq(err_func, initial_parameters[:], args=(x, y))
+            # fitted_params = initial_parameters
             if save:
                 self.config['exponential_fit_amplitude'] = str(fitted_params[0])
                 self.config['exponential_fit_mean'] = str(fitted_params[1])
@@ -274,7 +275,7 @@ class Signal:
 
         return fitted_params
 
-    def find_step_size(self, known_wavelength=546.1E-9, bins=1):
+    def find_step_size(self, known_wavelength=546.22E-9, bins=1):
         # dt = lambda / 2
         # displacement per step = peaks / steps * lambda / 2
         bin_width = int(np.floor(len(self.x) / bins))
@@ -367,13 +368,8 @@ class Signal:
         dps_data = (_dpses, unique_dpses, unique_dpses_counts, dps_mean, dps_std)
         return steps_data, dps_data
 
-    def get_motor_step_dps_with_fourier(self, known_wavelength, freq_limits=(2e-3, 1.5e-2)):
-        fourier = np.fft.fft(self.y)
-        freqs_full = np.fft.fftfreq(self.y.size, d=self.delta)
-
-        freq_filter = np.where(np.logical_and(freqs_full >= freq_limits[0], freqs_full <= freq_limits[1]))
-        frequencies = freqs_full[freq_filter]
-        magnitudes = abs(fourier[freq_filter])
+    def get_motor_step_dps_with_fourier(self, known_wavelength):
+        frequencies, magnitudes = self.get_frequencies_with_fourier(fit=False)
 
         # steps between peaks = 1 wavelength = 1 / freq
         # dps = known_wavelength / (2 * 1 wavelength) = freq * known_wavelength / 2
@@ -382,6 +378,20 @@ class Signal:
         scipy_fit, calc_fit = self.find_best_fit_gaussian(x_y=(_dpses, magnitudes))
         print('DPS: Mean: %.4e, std: %.4e' % (scipy_fit[1], scipy_fit[2]))
         return _dpses, scipy_fit, frequencies, magnitudes
+
+    def get_frequencies_with_fourier(self, freq_limits=(2e-3, 1.5e-2), fit=True):
+        fourier = np.fft.fft(self.y)
+        freqs_full = np.fft.fftfreq(self.y.size, d=self.delta)
+
+        freq_filter = np.where(np.logical_and(freqs_full >= freq_limits[0], freqs_full <= freq_limits[1]))
+        frequencies = freqs_full[freq_filter]
+        magnitudes = np.abs(fourier[freq_filter])
+
+        if fit:
+            scipy_fit, calc_fit = self.find_best_fit_gaussian(x_y=(frequencies, magnitudes))
+            return frequencies, magnitudes, scipy_fit
+
+        return frequencies, magnitudes
 
     def get_investigation_data(self, gamma, dps, gamma_err=0, dps_err=0, fit_type='exponential'):
         """Pass the standard deviation of the gaussian fit in terms of motor_steps
@@ -399,7 +409,8 @@ class Signal:
         elif fit_type == 'lorentzian':
             coherence_length_in_motor_steps = 2 * gamma
             coherence_length = coherence_length_in_motor_steps * dps  # in metres
-
+            # TODO: change this to in terms of the exponential decay.
+            # but the lorentzian curve fit on the interferogram has no physical meaning anyway
             spectral_width_hz = constants.c / (np.pi * coherence_length)
 
         elif fit_type == 'gaussian':
@@ -407,10 +418,58 @@ class Signal:
             coherence_length_in_motor_steps = 2 * np.sqrt(2 * np.log(2)) * gamma
             coherence_length = coherence_length_in_motor_steps * dps  # in metres
 
-            spectral_width_hz = constants.c / (np.pi * coherence_length)
+            # spectral_width_hz = constants.c / (np.pi * coherence_length)
+            # new sigma is pi / sigma
+            # idk why it's 1/ (pi * newsigma) and not pi / newsigma
+            # TODO: Figure out why gaussian spec width is so narrow.
+            spectral_width_hz = constants.c *2* np.sqrt(2 * np.log(2)) / (np.pi * gamma * dps)
+            # print("%.4e, %.4e" % (constants.c * 2 * np.sqrt(2 * np.log(2)) * np.pi / (gamma * dps), constants.c / (np.pi * coherence_length)))
+
+
+
+        # steps between peaks = 1 wavelength = 1 / freq
+        # dps = known_wavelength / (2 * 1 wavelength) = freq * known_wavelength / 2
+        frequencies_per_motor_step, magnitudes = self.get_frequencies_with_fourier(fit=False)
+        wavelengths = 2 * dps / frequencies_per_motor_step
+        scipy_fit, calc_fit = self.find_best_fit_gaussian(x_y=(wavelengths, magnitudes))
+        wavelengths_mean, wavelengths_std = scipy_fit[1], scipy_fit[2]
+        mean_wavelength = wavelengths_mean
+        spectral_width_m = mean_wavelength ** 2 / constants.c * spectral_width_hz
+
+        frequencies = constants.c / wavelengths
+
+        (amplitude, mean, gamma) = self.find_best_fit_lorentzian(x_y=(frequencies, magnitudes))
+        scipy_fit = (amplitude, mean, gamma)
+        frequencies_mean, frequencies_std = scipy_fit[1], scipy_fit[2]
+
+        ## This section plots the fits to the FT
+        # plt.plot(frequencies, magnitudes, '.')
+        #
+        # x_min, x_max = plt.xlim()
+        # lorentzian_fit = lambda fit_params, x: fit_params[0] / (1 + ((x - fit_params[1]) / fit_params[2]) ** 2)
+        # fit_x = np.linspace(x_min, x_max, 10000)
+        # optimised_lorentzian_fit = lorentzian_fit(scipy_fit, fit_x)
+        # fwhm = 2 * scipy_fit[2]
+        # plt.plot(fit_x, optimised_lorentzian_fit, 'k', label='SciPy fit (Lorentzian)\nFWHM: %.4e' % fwhm)
+        #
+        # gaussian_fit = lambda fit_params, x: fit_params[0] * np.exp(-(x - fit_params[1]) ** 2 / (2 * fit_params[2] ** 2))
+        # scipy_fit, calc_fit = self.find_best_fit_gaussian(also_use_scipy=True, x_y=(frequencies, magnitudes))
+        # optimised_gaussian_fit = gaussian_fit(scipy_fit, fit_x)
+        # fwhm = 2 * np.sqrt(2 * np.log(2)) * scipy_fit[2]
+        # plt.plot(fit_x, optimised_gaussian_fit, 'g', label='SciPy fit (G)\nFWHM: %.4e' % fwhm)
+        # plt.legend()
+        #
+        # plt.show()
+
+        print('With Fourier:')
+        print('Spectral Width (m): %.5e' % spectral_width_m)
+        print('Coherence length: %.5e' % coherence_length)
+        print('Mean frequencies: %.5e pm %.5e' % (frequencies_mean, frequencies_std))
+        print('Mean wavelength: %.5e pm %.5e' % (mean_wavelength, wavelengths_std))
+
+
 
         steps, unique_steps_between_peaks, unique_steps_counts = self.get_steps_between_peaks()
-
         distances = dps * steps
         # distances_mean, distances_std = np.mean(distances), np.std(distances)
         wavelengths = distances * 2
@@ -422,12 +481,13 @@ class Signal:
         frequencies_mean, frequencies_std = np.mean(frequencies), np.std(frequencies)
 
         spectral_width_m = mean_wavelength ** 2 / constants.c * spectral_width_hz
-        print('spec_width (Hz): %.5e' % spectral_width_hz)
-        print('spec_width (m): %.5e' % spectral_width_m)
+        print("With Step calculation")
+        print('Spectral Width (Hz): %.5e' % spectral_width_hz)
+        print('Spectral Width (m): %.5e' % spectral_width_m)
 
         if gamma_err == 0 and dps_err == 0:
             print('Coherence length: %.5e' % coherence_length)
-            print('Spectral width: %.5e' % spectral_width_hz)
+            print('Spectral width (Hz): %.5e' % spectral_width_hz)
             print('Mean frequencies: %.5e pm %.5e' % (frequencies_mean, frequencies_std))
             print('Mean wavelength: %.5e pm %.5e' % (mean_wavelength, wavelengths_std))
         else:
@@ -437,7 +497,7 @@ class Signal:
                                          (2 * coherence_length / (constants.c * mean_wavelength ** 3)) ** 2)
             print(mean_wavelength ** 2 / coherence_length, 'dlambda')
             print('Coherence length: %.5e pm %.5e' % (coherence_length, coherence_length_err))
-            print('Spectral width: %.5e pm %.5e' % (spectral_width_hz, spectral_width_err))
+            print('Spectral width (Hz): %.5e pm %.5e' % (spectral_width_hz, spectral_width_err))
             print('Mean frequencies: %.5e pm %.5e' % (frequencies_mean, frequencies_std))
             print('Mean wavelength: %.5e pm %.5e' % (mean_wavelength, wavelengths_std))
 
@@ -473,5 +533,5 @@ if __name__ == '__main__':
 
     signal_plotter.plot_motor_step_dps_with_fourier(signal)
 
-    # signal.get_motor_step_dps_with_fourier(known_wavelength=546.1e-9)
+    # signal.get_motor_step_dps_with_fourier(known_wavelength=546.22e-9)
     # signal.find_best_fit_gaussian(x_y=)
