@@ -5,7 +5,7 @@ The Python INTERferogram Analyser (name suggestions accepted).
 ## Features
 
 <p align="center">
-  <img width="586" height="453" src="https://github.com/twobackfromtheend/pintera/raw/master/gui_example.png">
+  <img width="505" height="481" src="https://github.com/twobackfromtheend/pintera/raw/master/gui_example.png">
 </p>
 
 ### Data Parsing
